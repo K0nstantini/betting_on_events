@@ -1,0 +1,9 @@
+int op::purchased_bet() asm "0x892e601d PUSHINT";
+int op::sell_bet() asm "0x688a82d6 PUSHINT";
+int op::burned_bet() asm "0xed715cdc PUSHINT";
+int op::change_comission_bet_buy() asm "0xc672dc34 PUSHINT";
+int op::change_comission_bet_sell() asm "0x74423109 PUSHINT";
+int op::change_comission_gov_buy() asm "0x4f118395 PUSHINT";
+int op::change_comission_gov_sell() asm "0xd51ac128 PUSHINT";
+int op::change_minter_bet() asm "0x025ee3b6 PUSHINT";
+int op::change_minter_gov() asm "0x1074a8fb PUSHINT";

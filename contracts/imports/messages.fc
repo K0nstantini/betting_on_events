@@ -1,0 +1,20 @@
+const NORMAL = 0;
+
+() messages::send(int start_flags, int amount, slice to, cell body, int mode) impure inline {
+    cell msg = begin_cell()
+            .store_uint(start_flags, 6)
+            .store_slice(to)
+            .store_coins(amount)
+            .store_uint(1, 107)
+            .store_ref(body)
+            .end_cell();
+    send_raw_message(msg, mode);
+}
+
+() messages::send_simple(int amount, slice to, cell body, int mode) impure inline {
+    messages::send(0x18, amount, to, body, mode);
+}
+
+() messages::send_nobounce(int amount, slice to, cell body, int mode) impure inline {
+    messages::send(0x10, amount, to, body, mode);
+}
