@@ -1,4 +1,4 @@
-const NORMAL = 0;
+const MODE_NORMAL = 0;
 
 () messages::send(int start_flags, int amount, slice to, cell body, int mode) impure inline {
     cell msg = begin_cell()

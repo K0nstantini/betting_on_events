@@ -1,4 +1,5 @@
-int op::purchased_bet() asm "0x892e601d PUSHINT";
+int op::purchased_bet_for_jettons() asm "0x48ece3c4 PUSHINT";
+int op::purchased_bet_for_ton() asm "0x1e537309 PUSHINT";
 int op::sell_bet() asm "0x688a82d6 PUSHINT";
 int op::burned_bet() asm "0xed715cdc PUSHINT";
 int op::change_comission_bet_buy() asm "0xc672dc34 PUSHINT";
@@ -7,3 +8,5 @@ int op::change_comission_gov_buy() asm "0x4f118395 PUSHINT";
 int op::change_comission_gov_sell() asm "0xd51ac128 PUSHINT";
 int op::change_minter_bet() asm "0x025ee3b6 PUSHINT";
 int op::change_minter_gov() asm "0x1074a8fb PUSHINT";
+int op::mint() asm "21 PUSHINT";
+int op::burn() asm "0x595f07bc PUSHINT";
