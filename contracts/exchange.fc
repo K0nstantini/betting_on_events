@@ -8,43 +8,24 @@
 (cell, cell, cell) load_data() inline {
     slice ds = get_data().begin_parse();
     return (
-            ds~load_dict(), ;; addresses
-            ds~load_dict(), ;; supplies
-            ds~load_dict(), ;; comissions
+            ds~load_ref(), ;; addresses
+            ds~load_ref(), ;; supplies
+            ds~load_ref(), ;; comissions
     );
 }
 
 () save_data(cell addresses, cell supplies, cell comissions) impure inline {
     set_data(begin_cell()
-            .store_dict(addresses)
-            .store_dict(supplies)
-            .store_dict(comissions)
+            .store_ref(addresses)
+            .store_ref(supplies)
+            .store_ref(comissions)
             .end_cell()
     );
 }
 
-slice get_ton_storage_addr(cell addresses) inline {
-    (slice ton_storage, int success) = addresses.udict_get?(256, "ton_storage");
-    throw_unless(error::ton_storage_not_found(), success);
-    return ton_storage;
-}
-
-slice get_bet_minter_addr(cell addresses) inline {
-    (slice bet_minter, int success) = addresses.udict_get?(256, "bet_minter");
-    throw_unless(error::bet_minter_not_found(), success);
-    return bet_minter;
-}
-
-slice get_gov_minter_addr(cell addresses) inline {
-    (slice gov_minter, int success) = addresses.udict_get?(256, "gov_minter");
-    throw_unless(error::gov_minter_not_found(), success);
-    return gov_minter;
-}
-
-
 ;; ton storage, bet minter, gov minter
 (int, int, int) get_addresses(cell addresses) inline {
-    slice ds = supplies.begin_parse();
+    slice ds = addresses.begin_parse();
     return (ds~load_msg_addr(), ds~load_msg_addr(), ds~load_msg_addr());
 }
 
@@ -62,23 +43,29 @@ cell combine_supplies(int ton_supply, int bet_supply, int gov_supply) inline {
             .end_cell();
 }
 
-int get_comission(int amount, slice payload) inline {
-    int sign = payload~load_uint(1);
-    int num_part = payload~load_uint(32);
-    int denom_part = payload~load_uint(32);
-    return muldiv(amount, num_part, denom_part);
+(cell, cell, cell, cell) get_fees(cell comissions) inline {
+    slice ds = comissions.begin_parse();
+    return (
+            ds~load_fee(), ;; bet buy
+            ds~load_fee(), ;; bet sell
+            ds~load_fee(), ;; gov buy
+            ds~load_fee(), ;; gov sell
+    );
 }
 
-int get_bet_buy_comisssion(int amount, cell comissions) inline {
-    (slice payload, int success) = comissions.udict_get?(256, "bet_buy");
-    throw_unless(error::bet_buy_comission_not_found(), success);
-    return get_comission(amount, payload);
+cell load_fee(slice ds) inline {
+    return begin_cell().
+            store_uint(ds~load_uint(65), 65)
+            .end_cell();
 }
 
-int get_bet_sell_comisssion(int amount, cell comissions) inline {
-    (slice payload, int success) = comissions.udict_get?(256, "bet_sell");
-    throw_unless(error::bet_sell_comission_not_found(), success);
-    return get_comission(amount, payload);
+int get_fee(cell payload, int amount) {
+    slice ds = payload.begin_parse();
+    int sign = ds~load_uint(1);
+    int num_part = ds~load_uint(32);
+    int denom_part = ds~load_uint(32);
+    int fee = muldiv(amount, num_part, denom_part);
+    return fee == 0 ? fee : - fee;
 }
 
 () recv_internal(int my_balance, int msg_value, cell in_msg_full, slice in_msg_body) impure {
@@ -96,24 +83,20 @@ int get_bet_sell_comisssion(int amount, cell comissions) inline {
     int op = in_msg_body~load_uint(32);
     int query_id = in_msg_body~load_uint(64);
 
-    (cell addresses, cell supplies, cell comissions) = load_data();
+    (cell addresses, cell supplies, cell fees) = load_data();
     (slice ton_storage, slice bet_minter, slice gov_minter) = get_addresses(addresses);
     (int ton_supply, int bet_supply, int gov_supply) = get_supplies(supplies);
+    (cell bet_buy_fee, cell bet_sell_fee, cell gov_buy_fee, cell gov_sell_fee) = get_fees(fees);
 
     if (op == op::purchased_bet_for_ton()) {
+        throw_unless(error::wrong_ton_storage_addr(), equal_slices(sender_address, ton_storage));
+
         slice from_address = in_msg_body~load_msg_addr();
         int ton_amount = in_msg_body~load_coins();
 
-        throw_unless(error::wrong_ton_storage_addr(), equal_slices(sender_address, ton_storage));
-
-        int comission = get_bet_buy_comisssion(ton_amount, comissions);
-
-        if (sign == 0) {
-            bet_amount = ton_amount - comission;
-            throw_unless(error::invalid_bet_amount(), bet_amount > 0);
-        } else {
-            bet_amount = ton_amount + comission;
-        }
+        int fee = get_fee(bet_buy_fee, ton_amount);
+        int bet_amount = ton_amount - fee;
+        throw_unless(error::invalid_bet_amount(), bet_amount > 0);
 
         var msg_body = begin_cell()
                 .store_uint(op::mint(), 32)
@@ -125,7 +108,7 @@ int get_bet_sell_comisssion(int amount, cell comissions) inline {
         messages::send_simple(0, bet_minter, msg_body, MODE_NORMAL);
 
         supplies = combine_supplies(ton_supply + ton_amount, bet_supply + bet_amount, gov_supply);
-        save_data(addresses, supplies, comissions);
+        save_data(addresses, supplies, fees);
         return ();
     }
 
@@ -144,20 +127,17 @@ int get_bet_sell_comisssion(int amount, cell comissions) inline {
     }
 
     if (op == op::burned_bet()) {
+        throw_unless(error::wrong_bet_minter_addr(), equal_slices(sender_address, bet_minter));
+
         slice from_address = in_msg_body~load_msg_addr();
         int bet_amount = in_msg_body~load_coins();
 
-        int comission = get_bet_sell_comisssion(bet_amount, comissions);
-
-        if (sign == 0) {
-            ton_amount = bet_amount - comission;
-            throw_unless(error::invalid_ton_amount(), ton_amount > 0);
-        } else {
-            ton_amount = bet_amount + comission;
-        }
+        int fee = get_fee(bet_sell_fee, bet_amount);
+        int ton_amount = bet_amount - fee;
+        throw_unless(error::invalid_ton_amount(), ton_amount > 0);
 
         supplies = combine_supplies(ton_supply - ton_amount, bet_supply - bet_amount, gov_supply);
-        save_data(addresses, supplies, comissions);
+        save_data(addresses, supplies, fees);
         return ();
     }
 

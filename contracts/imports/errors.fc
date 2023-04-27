@@ -10,7 +10,7 @@ int error::gov_buy_comission_not_found() asm "100 PUSHINT";
 int error::gov_sell_comission_not_found() asm "100 PUSHINT";
 
 int error::wrong_ton_storage_addr() asm "100 PUSHINT";
-int error::wrong_ton_minter_addr() asm "100 PUSHINT";
+int error::wrong_bet_minter_addr() asm "100 PUSHINT";
 int error::wrong_gov_minter_addr() asm "100 PUSHINT";
 
 int error::invalid_bet_amount() asm "100 PUSHINT";
