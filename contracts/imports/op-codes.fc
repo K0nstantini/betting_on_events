@@ -1,11 +1,16 @@
-int op::purchased_bet_for_jettons() asm "0x48ece3c4 PUSHINT";
-int op::purchased_bet_for_ton() asm "0x1e537309 PUSHINT";
+int op::buy_bet_for_ton() asm "0x56dd041b PUSHINT";
 int op::sell_bet() asm "0x688a82d6 PUSHINT";
 int op::burned_bet() asm "0xed715cdc PUSHINT";
-int op::change_comission_bet_buy() asm "0xc672dc34 PUSHINT";
-int op::change_comission_bet_sell() asm "0x74423109 PUSHINT";
-int op::change_comission_gov_buy() asm "0x4f118395 PUSHINT";
-int op::change_comission_gov_sell() asm "0xd51ac128 PUSHINT";
+
+int op::inc_bet_buy_fee() asm "0x7cb6177b PUSHINT";
+int op::dec_bet_buy_fee() asm "0xcf805e9a PUSHINT";
+int op::inc_bet_sell_fee() asm "0xc541918e PUSHINT";
+int op::dec_bet_sell_fee() asm "0x12ff7529 PUSHINT";
+int op::inc_gov_buy_fee() asm "0x34350376 PUSHINT";
+int op::dec_gov_buy_fee() asm "0x87034a97 PUSHINT";
+int op::inc_gov_sell_fee() asm "0xbbb86e27 PUSHINT";
+int op::dec_gov_sell_fee() asm "0x6c068a80 PUSHINT";
+
 int op::change_minter_bet() asm "0x025ee3b6 PUSHINT";
 int op::change_minter_gov() asm "0x1074a8fb PUSHINT";
 int op::mint() asm "21 PUSHINT";

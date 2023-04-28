@@ -88,7 +88,7 @@ int get_fee(cell payload, int amount) {
     (int ton_supply, int bet_supply, int gov_supply) = get_supplies(supplies);
     (cell bet_buy_fee, cell bet_sell_fee, cell gov_buy_fee, cell gov_sell_fee) = get_fees(fees);
 
-    if (op == op::purchased_bet_for_ton()) {
+    if (op == op::buy_bet_for_ton()) {
         throw_unless(error::wrong_ton_storage_addr(), equal_slices(sender_address, ton_storage));
 
         slice from_address = in_msg_body~load_msg_addr();
@@ -105,7 +105,7 @@ int get_fee(cell payload, int amount) {
                 .store_coins(bet_amount)
                 .end_cell();
 
-        messages::send_simple(0, bet_minter, msg_body, MODE_NORMAL);
+        messages::send_simple(0, bet_minter, msg_body, send_mode:normal());
 
         supplies = combine_supplies(ton_supply + ton_amount, bet_supply + bet_amount, gov_supply);
         save_data(addresses, supplies, fees);
@@ -122,7 +122,7 @@ int get_fee(cell payload, int amount) {
                 .store_coins(amount)
                 .end_cell();
 
-        messages::send_simple(0, bet_minter, msg_body, MODE_NORMAL);
+        messages::send_simple(0, bet_minter, msg_body, send_mode:normal());
         return ();
     }
 
@@ -141,29 +141,38 @@ int get_fee(cell payload, int amount) {
         return ();
     }
 
-    if (op == op::change_comission_bet_buy()) {
+    if (op == op::inc_bet_buy_fee()) {
         return ();
     }
 
-    if (op == op::change_comission_bet_sell()) {
+    if (op == op::dec_bet_buy_fee()) {
         return ();
     }
 
-    if (op == op::change_comission_gov_buy()) {
+    if (op = op::inc_bet_sell_fee()) {
         return ();
     }
 
-    if (op == op::change_comission_gov_sell()) {
+    if (op = op::dec_bet_sell_fee()) {
         return ();
     }
 
-    if (op == op::change_minter_bet()) {
+    if (op == op::inc_gov_buy_fee()) {
         return ();
     }
 
-    if (op == op::change_minter_gov()) {
+    if (op == op::dec_gov_buy_fee()) {
         return ();
     }
+
+    if (op = op::inc_gov_sell_fee()) {
+        return ();
+    }
+
+    if (op = op::dec_gov_sell_fee()) {
+        return ();
+    }
+
 
     throw(0xffff);
 }

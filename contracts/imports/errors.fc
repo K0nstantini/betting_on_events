@@ -1,14 +1,3 @@
-int error::ton_storage_not_found() asm "100 PUSHINT";
-int error::ton_supply_not_found() asm "100 PUSHINT";
-int error::bet_supply_not_found() asm "100 PUSHINT";
-int error::gov_supply_not_found() asm "100 PUSHINT";
-int error::bet_minter_not_found() asm "100 PUSHINT";
-int error::gov_minter_not_found() asm "100 PUSHINT";
-int error::bet_buy_comission_not_found() asm "100 PUSHINT";
-int error::bet_sell_comission_not_found() asm "100 PUSHINT";
-int error::gov_buy_comission_not_found() asm "100 PUSHINT";
-int error::gov_sell_comission_not_found() asm "100 PUSHINT";
-
 int error::wrong_ton_storage_addr() asm "100 PUSHINT";
 int error::wrong_bet_minter_addr() asm "100 PUSHINT";
 int error::wrong_gov_minter_addr() asm "100 PUSHINT";
