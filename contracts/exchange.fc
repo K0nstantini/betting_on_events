@@ -4,6 +4,10 @@
 #include "imports/errors.fc";
 #include "imports/messages.fc";
 #include "imports/op-codes.fc";
+#include "imports/params.fc";
+
+const min_ton_for_storage = 100000000; ;; 0.01 TON
+const fee_denom = 10000;
 
 (cell, cell, cell) load_data() inline {
     slice ds = get_data().begin_parse();
@@ -43,21 +47,32 @@ cell combine_supplies(int ton_supply, int bet_supply, int gov_supply) inline {
             .end_cell();
 }
 
-(cell, cell, cell, cell) get_fees(cell comissions) inline {
-    slice ds = comissions.begin_parse();
+
+(cell, cell, cell, cell) get_fees(cell fees) inline {
+    slice ds = fees.begin_parse();
     return (
-            ds~load_fee(), ;; bet buy
-            ds~load_fee(), ;; bet sell
-            ds~load_fee(), ;; gov buy
-            ds~load_fee(), ;; gov sell
+            ds~load_ref(), ;; bet buy
+            ds~load_ref(), ;; bet sell
+            ds~load_ref(), ;; gov buy
+            ds~load_ref(), ;; gov sell
     );
 }
 
-cell load_fee(slice ds) inline {
-    return begin_cell().
-            store_uint(ds~load_uint(65), 65)
-            .end_cell();
-}
+;; (cell, cell, cell, cell) get_fees(cell fees) inline {
+;;     slice ds = fees.begin_parse();
+;;     return (
+;;             ds~load_fee(), ;; bet buy
+;;             ds~load_fee(), ;; bet sell
+;;             ds~load_fee(), ;; gov buy
+;;             ds~load_fee(), ;; gov sell
+;;     );
+;; }
+
+;; cell load_fee(slice ds) inline {
+;;     return begin_cell().
+;;             store_uint(ds~load_uint(65), 65)
+;;             .end_cell();
+;; }
 
 int get_fee(cell payload, int amount) {
     slice ds = payload.begin_parse();
@@ -65,7 +80,23 @@ int get_fee(cell payload, int amount) {
     int num_part = ds~load_uint(32);
     int denom_part = ds~load_uint(32);
     int fee = muldiv(amount, num_part, denom_part);
-    return fee == 0 ? fee : - fee;
+    return sign == 0 ? fee : - fee;
+}
+
+int send_coins(slice destination, slice user_addr, int amount, cell fee_c, int op) impure inline {
+    int fee = get_fee(fee_c, amount);
+    amount -= fee;
+    throw_unless(error::invalid_amount(), amount > 0);
+
+    var msg_body = begin_cell()
+            .store_uint(op, 32)
+            .store_uint(query_id, 64)
+            .store_slice(user_addr)
+            .store_coins(amount)
+            .end_cell();
+
+    messages::send_simple(destination, msg_body, send_mode:normal(), 0);
+    return amount;
 }
 
 () recv_internal(int my_balance, int msg_value, cell in_msg_full, slice in_msg_body) impure {
@@ -88,58 +119,55 @@ int get_fee(cell payload, int amount) {
     (int ton_supply, int bet_supply, int gov_supply) = get_supplies(supplies);
     (cell bet_buy_fee, cell bet_sell_fee, cell gov_buy_fee, cell gov_sell_fee) = get_fees(fees);
 
-    if (op == op::buy_bet_for_ton()) {
+    if (op == op::sent_ton()) {
         throw_unless(error::wrong_ton_storage_addr(), equal_slices(sender_address, ton_storage));
 
-        slice from_address = in_msg_body~load_msg_addr();
+        slice to_addr = in_msg_body~load_msg_addr();
         int ton_amount = in_msg_body~load_coins();
 
-        int fee = get_fee(bet_buy_fee, ton_amount);
-        int bet_amount = ton_amount - fee;
-        throw_unless(error::invalid_bet_amount(), bet_amount > 0);
-
-        var msg_body = begin_cell()
-                .store_uint(op::mint(), 32)
-                .store_uint(query_id, 64)
-                .store_slice(from_address)
-                .store_coins(bet_amount)
-                .end_cell();
-
-        messages::send_simple(0, bet_minter, msg_body, send_mode:normal());
+        int bet_amount = send_coins(bet_minter, to_addr, ton_amount, bet_buy_fee, op::sent_mint());
 
         supplies = combine_supplies(ton_supply + ton_amount, bet_supply + bet_amount, gov_supply);
         save_data(addresses, supplies, fees);
         return ();
     }
 
-    if (op == op::sell_bet()) {
-        int amount = in_msg_body~load_coins();
+    if (op == op::burn()) {
+        if (equal_slices(sender_address, bet_minter)) {
+            int amount = in_msg_body~load_coins();
+            slice to_addr = in_msg_body~load_msg_addr();
+            int burning_op = in_msg_body~load_uint(32);
 
-        var msg_body = begin_cell()
-                .store_uint(op::burn(), 32)
-                .store_uint(query_id, 64)
-                .store_slice(sender_address)
-                .store_coins(amount)
-                .end_cell();
+            if (burning_op == op::burned_bet_for_ton()) {
+                int ton_amount = send_coins(ton_storage, to_addr, amount, bet_sell_fee, op::sent_ton());
+                supplies = combine_supplies(ton_supply - ton_amount, bet_supply - amount, gov_supply);
+                save_data(addresses, supplies, fees);
+                return ();
+            }
 
-        messages::send_simple(0, bet_minter, msg_body, send_mode:normal());
-        return ();
-    }
+            if (burning_op == op::burned_bet_for_gov()) {
+                amount = calc_gov_for_bet(gov_supply, bet_supply, amount);
+                int gov_amount = send_coins(gov_minter, to_addr, amount, gov_buy_fee, op::sent_mint());
+                supplies = combine_supplies(ton_supply, bet_supply - amount, gov_supply + gov_amount);
+                save_data(addresses, supplies, fees);
+                return ();
+            }
 
-    if (op == op::burned_bet()) {
-        throw_unless(error::wrong_bet_minter_addr(), equal_slices(sender_address, bet_minter));
+            throw(0x);
+        }
 
-        slice from_address = in_msg_body~load_msg_addr();
-        int bet_amount = in_msg_body~load_coins();
+        throw_unless(error::wrong_minter_addr(), equal_slices(sender_address, gov_minter));
 
-        int fee = get_fee(bet_sell_fee, bet_amount);
-        int ton_amount = bet_amount - fee;
-        throw_unless(error::invalid_ton_amount(), ton_amount > 0);
-
-        supplies = combine_supplies(ton_supply - ton_amount, bet_supply - bet_amount, gov_supply);
+        amount = calc_bet_for_gov(gov_supply, bet_supply, amount);
+        int bet_amount = send_coins(bet_minter, to_addr, amount, gov_sell_fee, op::sent_mint());
+        supplies = combine_supplies(ton_supply, bet_supply + amount, gov_supply - gov_amount);
         save_data(addresses, supplies, fees);
         return ();
     }
+
+    ;;throw_unless(error::wrong_vote_addr(), equal_slices(sender_address, vote));
+    ;;force_chain(addr);
+
 
     if (op == op::inc_bet_buy_fee()) {
         return ();
@@ -180,3 +208,32 @@ int get_fee(cell payload, int amount) {
 (cell, cell, cell) get_data() method_id {
     return load_data();
 }
+
+() fn(slice set_name, int len) {
+    builder b = begin_cell()
+            .store_uint(set_type, 1) ;; type setting: 0 - int, 1 - address
+            .store_uint(has_value, 1); ;;
+
+    if (set_type = 1) {
+        b.store_slice(value);
+    } else {
+        b.store_uint(len, 10).store_int(value, len);
+    }
+
+    b.store_slice(set_name)
+            .end_cell();
+}
+
+cell get_settings() method_id {
+    (_, _, fees) = load_data();
+    (cell bet_buy_fee, cell bet_sell_fee, cell gov_buy_fee, cell gov_sell_fee) = get_fees(fees);
+
+    cell dict = new_dict();
+    dict~udict_set(32, op::inc_bet_buy_fee(), bet_buy_fee);
+    dict~udict_set(32, op::dec_bet_buy_fee(), bet_buy_fee);
+    ;;     dict~set_item();
+
+    return dict;
+}
+
+;; type setting

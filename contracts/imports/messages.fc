@@ -2,7 +2,7 @@ const int MODE_NORMAL = 0;
 
 int send_mode:normal() asm "0 PUSHINT";
 
-() messages::send(int start_flags, int amount, slice to, cell body, int mode) impure inline {
+() messages::send(int start_flags, slice to, cell body, int mode, int amount) impure inline {
     cell msg = begin_cell()
             .store_uint(start_flags, 6)
             .store_slice(to)
@@ -13,10 +13,10 @@ int send_mode:normal() asm "0 PUSHINT";
     send_raw_message(msg, mode);
 }
 
-() messages::send_simple(int amount, slice to, cell body, int mode) impure inline {
-    messages::send(0x18, amount, to, body, mode);
+() messages::send_simple(slice to, cell body, int mode, int amount) impure inline {
+    messages::send(0x18, ato, body, mode, amount);
 }
 
-() messages::send_nobounce(int amount, slice to, cell body, int mode) impure inline {
-    messages::send(0x10, amount, to, body, mode);
+() messages::send_nobounce(slice to, cell body, int mode, int amount) impure inline {
+    messages::send(0x10, to, body, mode, amount);
 }
