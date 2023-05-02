@@ -7,14 +7,19 @@ int send_mode:normal() asm "0 PUSHINT";
             .store_uint(start_flags, 6)
             .store_slice(to)
             .store_coins(amount)
-            .store_uint(1, 107)
-            .store_ref(body)
-            .end_cell();
-    send_raw_message(msg, mode);
+            .store_uint(1, 107);
+    if (~body.slice_empty?()) {
+        msg~store_ref(body);
+    }
+    send_raw_message(msg.end_cell(), mode);
 }
 
 () messages::send_simple(slice to, cell body, int mode, int amount) impure inline {
-    messages::send(0x18, ato, body, mode, amount);
+    messages::send(0x18, to, body, mode, amount);
+}
+
+() messages::send_empty(slice to, int mode, int amount) impure inline {
+    messages::send(0x18, to, begin_cell().end_cell(), mode, amount);
 }
 
 () messages::send_nobounce(slice to, cell body, int mode, int amount) impure inline {

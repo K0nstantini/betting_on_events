@@ -3,6 +3,7 @@ int error::wrong_bet_minter_addr() asm "100 PUSHINT";
 int error::wrong_gov_minter_addr() asm "100 PUSHINT";
 int error::wrong_minter_addr() asm "100 PUSHINT";
 int error::wrong_vote_addr() asm "100 PUSHINT";
+int error::wrong_exhange_addr() asm "100 PUSHINT";
 
 int error::invalid_bet_amount() asm "100 PUSHINT";
 int error::invalid_ton_amount() asm "100 PUSHINT";

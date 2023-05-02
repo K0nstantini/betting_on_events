@@ -1,5 +1,4 @@
 int op::sent_ton() asm "0x2826e632 PUSHINT";
-;; int op::burned_bet() asm "0x1a04feed PUSHINT";
 
 int op::burned_bet_for_ton() asm "0x PUSHINT";
 int op::burned_bet_for_gov() asm "0x PUSHINT";
@@ -24,3 +23,6 @@ int op::change_minter_bet() asm "0x025ee3b6 PUSHINT";
 int op::change_minter_gov() asm "0x1074a8fb PUSHINT";
 int op::mint() asm "21 PUSHINT";
 int op::burn() asm "0x595f07bc PUSHINT";
+
+int op::deposit_ton() asm "0x PUSHINT";
+int op::withdraw_ton() asm "0x PUSHINT";
