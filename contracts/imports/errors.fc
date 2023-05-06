@@ -9,3 +9,6 @@ int error::invalid_bet_amount() asm "100 PUSHINT";
 int error::invalid_ton_amount() asm "100 PUSHINT";
 int error::invalid_gov_amount() asm "100 PUSHINT";
 int error::invalid_amount() asm "100 PUSHINT";
+int error::invalid_supply() asm "100 PUSHINT";
+
+int error::dict_value_not_found() asm "100 PUSHINT";
