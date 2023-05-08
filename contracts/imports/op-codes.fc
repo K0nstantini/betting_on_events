@@ -5,6 +5,7 @@ int op::burned_bet_for_gov() asm "0x PUSHINT";
 int op::burned_bet_for_nothing() asm "0x PUSHINT";
 
 int op::send_ton() asm "0x PUSHINT";
+int op::change_settings() asm "0x PUSHINT";
 
 int op::buy_bet() asm "0xb9b7b603 PUSHINT";
 int op::sell_bet() asm "0x2a585548 PUSHINT";
