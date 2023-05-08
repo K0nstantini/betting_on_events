@@ -7,7 +7,7 @@
 #include "imports/params.fc";
 
 const min_ton_for_storage = 10000000; ;; 0.01 TON
-const fee_accuracy = 10000; ;;0.01
+const fee_accuracy = 10000; ;; 0.01
 const gov_start_price = 10000;
 
 const bet_buy_fee = "bet_buy_fee"c;
@@ -20,7 +20,7 @@ const gov_sell_fee = "gov_sell_fee"c;
     return (
             ds~load_ref(), ;; addresses
             ds~load_ref(), ;; supplies
-            ds~load_dict(), ;; comissions
+            ds~load_dict() ;; comissions
     );
 }
 
@@ -40,9 +40,9 @@ const gov_sell_fee = "gov_sell_fee"c;
 }
 
 ;; ton, bet, gov
-(int, int, int, int) get_supplies(cell supplies) inline {
+(int, int, int) get_supplies(cell supplies) inline {
     slice ds = supplies.begin_parse();
-    return (ds~load_coins(), ds~load_coins(), ds~load_coins(), ds~load_coins());
+    return (ds~load_coins(), ds~load_coins(), ds~load_coins());
 }
 
 cell combine_supplies(int ton_supply, int bet_supply, int gov_supply) impure inline_ref {
@@ -54,15 +54,15 @@ cell combine_supplies(int ton_supply, int bet_supply, int gov_supply) impure inl
             .end_cell();
 }
 
-int get_fee(int amount, cell dict, int id) impure inline_ref {
-    (slice payload, int success) = dic.udict_get?(256, key);
+int get_fee(int amount, cell dic, int id) impure inline_ref {
+    (slice payload, int success) = dic.udict_get?(32, id);
     throw_unless(error::dict_value_not_found(), success);
     payload~skip_bits(2);
     int factor = payload~load_int(16);
     return muldiv(amount, factor, fee_accuracy);
 }
 
-() send_coins(slice destination, slice user_addr, int amount, int op) impure inline_ref {
+() send_coins(slice destination, slice user_addr, int amount, int op, int query_id) impure inline_ref {
     throw_unless(error::invalid_amount(), amount > 0);
 
     var msg_body = begin_cell()
@@ -95,38 +95,9 @@ int gov_for_bet(int amount, int gov_supply, int bet_supply, int ton_supply, cell
 }
 
 int bet_for_gov(int amount, int gov_supply, int bet_supply, int ton_supply, cell fees) inline {
-    amount = muldiv(amount - fee, gov_supply, ton_supply - bet_supply);
+    amount = muldiv(amount, gov_supply, ton_supply - bet_supply);
     int fee = get_fee(amount, fees, gov_sell_fee);
     return amount - fee;
-}
-
-cell change_fee(slice sender, slice gov, cell fees, int id_fee, int sign) impure inline_ref {
-    throw_unless(error::invalid_sender_addr(), equal_slices(sender, gov));
-
-    (slice payload, int success) = fees.udict_get?(32, id_fee);
-    throw_unless(error::dict_value_not_found(), success);
-
-    payload~skip_bits(2);
-    int value = payload~load_int(16);
-    int min = payload~load_int(16);
-    int max = payload~load_int(16);
-    int step = payload~load_uint(14);
-    int step_range = payload~load_uint(28);
-
-    value = value + muldiv((max - min), value, fee_accuracy) * sign;
-    value = (sign > 0) ?
-            ((value > max) ? max : value) :
-            ((value < min) ? min : value);
-
-    cell fee = begin_cell()
-            .store_int(value, 16)
-            .store_int(min, 16)
-            .store_int(max, 16)
-            .store_uint(step, 14)
-            .store_uint(step_range, 28)
-            .end_cell();
-    fees~udict_set(32, id_fee, fee);
-    return fees;
 }
 
 () recv_internal(int my_balance, int msg_value, cell in_msg_full, slice in_msg_body) impure {
@@ -148,7 +119,7 @@ cell change_fee(slice sender, slice gov, cell fees, int id_fee, int sign) impure
     (slice ton_storage, slice bet_minter, slice gov_minter, slice gov_contract) = get_addresses(addresses);
     (int ton_supply, int bet_supply, int gov_supply) = get_supplies(supplies);
 
-    ;; buy BET
+    ;;     ;; buy BET
     if (op == op::deposit_ton()) {
         throw_unless(error::invalid_sender_addr(), equal_slices(sender_addr, ton_storage));
 
@@ -157,16 +128,17 @@ cell change_fee(slice sender, slice gov, cell fees, int id_fee, int sign) impure
         int bet_amount = bet_for_ton(ton_amount, fees);
 
         supplies = combine_supplies(ton_supply + ton_amount, bet_supply + bet_amount, gov_supply);
-        send_coins(bet_minter, to_addr, bet_amount, op::mint());
+        send_coins(bet_minter, to_addr, bet_amount, op::mint(), query_id);
 
         save_data(addresses, supplies, fees);
         return ();
     }
 
-    if (op == op::burn()) {
+    if (op == op::burn_notification()) {
+        int amount = in_msg_body~load_coins();
+        slice to_addr = in_msg_body~load_msg_addr();
+
         if (equal_slices(sender_addr, bet_minter)) {
-            int amount = in_msg_body~load_coins();
-            slice to_addr = in_msg_body~load_msg_addr();
             int burning_op = in_msg_body~load_uint(32);
 
             ;; sell BET
@@ -174,7 +146,7 @@ cell change_fee(slice sender, slice gov, cell fees, int id_fee, int sign) impure
                 int ton_amount = ton_for_bet(amount, fees);
 
                 supplies = combine_supplies(ton_supply - ton_amount, bet_supply - amount, gov_supply);
-                send_coins(ton_storage, to_addr, ton_amount, op::withdraw_ton());
+                send_coins(ton_storage, to_addr, ton_amount, op::withdraw_ton(), query_id);
 
                 save_data(addresses, supplies, fees);
                 return ();
@@ -185,79 +157,60 @@ cell change_fee(slice sender, slice gov, cell fees, int id_fee, int sign) impure
                 int gov_amount = gov_for_bet(amount, gov_supply, bet_supply, ton_supply, fees);
 
                 supplies = combine_supplies(ton_supply, bet_supply - amount, gov_supply + gov_amount);
-                send_coins(gov_minter, to_addr, gov_amount, op::mint());
+                send_coins(gov_minter, to_addr, gov_amount, op::mint(), query_id);
 
                 save_data(addresses, supplies, fees);
                 return ();
             }
 
-            throw(0x);
+            throw(error::invalid_op_code());
         }
-
 
         ;; sell GOV
         if (equal_slices(sender_addr, gov_minter)) {
             int bet_amount = bet_for_gov(amount, gov_supply, bet_supply, ton_supply, fees);
 
             supplies = combine_supplies(ton_supply, bet_supply + bet_amount, gov_supply - amount);
-            send_coins(bet_minter, to_addr, bet_amount, op::mint());
+            send_coins(bet_minter, to_addr, bet_amount, op::mint(), query_id);
 
             save_data(addresses, supplies, fees);
             return ();
         }
 
-
-        throw(0x);
+        throw(error::invalid_sender_addr());
 
     }
 
-    ;;force_chain(addr);
+    if (op == op::change_settings()) {
+        throw_unless(error::invalid_sender_addr(), equal_slices(sender_addr, gov_contract));
 
+        int id = in_msg_body~load_uint(32);
+        int sign = in_msg_body~load_uint(1);
 
-    if (op == op::inc_bet_buy_fee()) {
-        cell fees = change_fee(sender_addr, gov_contract, fees, bet_buy_fee, 1);
-        save_data(addresses, supplies, fees);
-        return ();
-    }
+        (slice payload, int success) = fees.udict_get?(32, id);
+        throw_unless(error::dict_value_not_found(), success);
 
-    if (op == op::dec_bet_buy_fee()) {
-        cell fees = change_fee(sender_addr, gov_contract, fees, bet_buy_fee, -1);
-        save_data(addresses, supplies, fees);
-        return ();
-    }
+        payload~skip_bits(2);
+        int value = payload~load_int(16);
+        int min = payload~load_int(16);
+        int max = payload~load_int(16);
+        int step = payload~load_uint(14);
+        int step_range = payload~load_uint(28);
 
-    if (op = op::inc_bet_sell_fee()) {
-        cell fees = change_fee(sender_addr, gov_contract, fees, bet_sell_fee, 1);
-        save_data(addresses, supplies, fees);
-        return ();
-    }
+        value = value + muldiv((max - min), value, fee_accuracy) * sign;
+        value = (sign > 0) ?
+                ((value > max) ? max : value) :
+                ((value < min) ? min : value);
 
-    if (op = op::dec_bet_sell_fee()) {
-        cell fees = change_fee(sender_addr, gov_contract, fees, bet_sell_fee, -1);
-        save_data(addresses, supplies, fees);
-        return ();
-    }
+        cell fee = begin_cell()
+                .store_int(value, 16)
+                .store_int(min, 16)
+                .store_int(max, 16)
+                .store_uint(step, 14)
+                .store_uint(step_range, 28)
+                .end_cell();
+        fees~udict_set(32, id, fee.begin_parse());
 
-    if (op == op::inc_gov_buy_fee()) {
-        cell fees = change_fee(sender_addr, gov_contract, fees, gov_buy_fee, 1);
-        save_data(addresses, supplies, fees);
-        return ();
-    }
-
-    if (op == op::dec_gov_buy_fee()) {
-        cell fees = change_fee(sender_addr, gov_contract, fees, gov_buy_fee, -1);
-        save_data(addresses, supplies, fees);
-        return ();
-    }
-
-    if (op = op::inc_gov_sell_fee()) {
-        cell fees = change_fee(sender_addr, gov_contract, fees, gov_sell_fee, 1);
-        save_data(addresses, supplies, fees);
-        return ();
-    }
-
-    if (op = op::dec_gov_sell_fee()) {
-        cell fees = change_fee(sender_addr, gov_contract, fees, gov_sell_fee, -1);
         save_data(addresses, supplies, fees);
         return ();
     }
@@ -265,16 +218,6 @@ cell change_fee(slice sender, slice gov, cell fees, int id_fee, int sign) impure
     throw(0xffff);
 }
 
-cell get_fees() method_id {
-    (_, _, fees) = load_data();
-    (cell bet_buy_fee, cell bet_sell_fee, cell gov_buy_fee, cell gov_sell_fee) = get_fees(fees);
-
-    cell dict = new_dict();
-    dict~udict_set(32, op::inc_bet_buy_fee(), bet_buy_fee);
-    dict~udict_set(32, op::dec_bet_buy_fee(), bet_buy_fee);
-    ;;     dict~set_item();
-
-    return dict;
+(cell, cell, cell) get_exchange_data() method_id {
+    return load_data();
 }
-
-;; type setting

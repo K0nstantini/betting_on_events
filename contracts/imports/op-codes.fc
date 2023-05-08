@@ -1,11 +1,11 @@
 int op::sent_ton() asm "0x2826e632 PUSHINT";
 
-int op::burned_bet_for_ton() asm "0x PUSHINT";
-int op::burned_bet_for_gov() asm "0x PUSHINT";
-int op::burned_bet_for_nothing() asm "0x PUSHINT";
+int op::burned_bet_for_ton() asm "0x6e5e11b2 PUSHINT";
+int op::burned_bet_for_gov() asm "0x635294cd PUSHINT";
+int op::burned_bet_for_nothing() asm "0x7d2b7dfd PUSHINT";
 
-int op::send_ton() asm "0x PUSHINT";
-int op::change_settings() asm "0x PUSHINT";
+int op::send_ton() asm "0x48c671b0 PUSHINT";
+int op::change_settings() asm "0x4abfbc2b PUSHINT";
 
 int op::buy_bet() asm "0xb9b7b603 PUSHINT";
 int op::sell_bet() asm "0x2a585548 PUSHINT";
@@ -24,8 +24,8 @@ int op::dec_gov_sell_fee() asm "0x6c068a80 PUSHINT";
 int op::change_minter_bet() asm "0x025ee3b6 PUSHINT";
 int op::change_minter_gov() asm "0x1074a8fb PUSHINT";
 
-int op::deposit_ton() asm "0x PUSHINT";
-int op::withdraw_ton() asm "0x PUSHINT";
+int op::deposit_ton() asm "0x33fcdcc4 PUSHINT";
+int op::withdraw_ton() asm "0x37726bdb PUSHINT";
 
 int op::transfer() asm "0xf8a7ea5 PUSHINT";
 int op::transfer_notification() asm "0x7362d09c PUSHINT";
