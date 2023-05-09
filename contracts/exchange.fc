@@ -135,8 +135,8 @@ int bet_for_gov(int amount, int gov_supply, int bet_supply, int ton_supply, cell
     }
 
     if (op == op::burn_notification()) {
-        int amount = in_msg_body~load_coins();
         slice to_addr = in_msg_body~load_msg_addr();
+        int amount = in_msg_body~load_coins();
 
         if (equal_slices(sender_addr, bet_minter)) {
             int burning_op = in_msg_body~load_uint(32);

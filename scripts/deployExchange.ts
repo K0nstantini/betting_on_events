@@ -1,6 +1,7 @@
-import {toNano, beginCell, Address, Cell} from 'ton-core';
+import {toNano, beginCell, Cell} from 'ton-core';
 import {Exchange} from '../wrappers/Exchange';
 import {compile, NetworkProvider} from '@ton-community/blueprint';
+import {Addresses} from "../helpers/addresses";
 
 export async function run(provider: NetworkProvider) {
     const exchange = provider.open(Exchange.createFromConfig({
@@ -16,21 +17,16 @@ export async function run(provider: NetworkProvider) {
     // run methods on `exchange`
 }
 
-function getAddresses() {
-    const tonStorage = "";
-    const betMinter = "";
-    const govMinter = "";
-    const gov = "";
-
+export function getAddresses() {
     return beginCell()
-        .storeAddress(Address.parse(tonStorage))
-        .storeAddress(Address.parse(betMinter))
-        .storeAddress(Address.parse(govMinter))
-        .storeAddress(Address.parse(gov))
+        .storeAddress(Addresses.tonStorage)
+        .storeAddress(Addresses.betMinter)
+        .storeAddress(Addresses.govMinter)
+        .storeAddress(Addresses.gov)
         .endCell();
 }
 
-function getSupplies() {
+export function getSupplies() {
     return beginCell()
         .storeCoins(0) // ton
         .storeCoins(0) // bet
@@ -38,7 +34,7 @@ function getSupplies() {
         .endCell();
 }
 
-function getFees() {
+export function getFees() {
     return beginCell()
         .storeRef(getFee(1000)) // bet buy
         .storeRef(getFee(1000)) // bet sell

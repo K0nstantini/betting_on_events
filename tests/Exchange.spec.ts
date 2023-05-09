@@ -1,23 +1,37 @@
-import { Blockchain, SandboxContract } from '@ton-community/sandbox';
-import { Cell, toNano } from 'ton-core';
-import { Exchange } from '../wrappers/Exchange';
+import {Blockchain, SandboxContract, TreasuryContract} from '@ton-community/sandbox';
+import {Cell, toNano} from 'ton-core';
+import {Exchange} from '../wrappers/Exchange';
 import '@ton-community/test-utils';
-import { compile } from '@ton-community/blueprint';
+import {compile} from '@ton-community/blueprint';
+import {KeyPair, mnemonicNew, mnemonicToPrivateKey} from "ton-crypto";
+import {getAddresses, getFees, getSupplies} from "../scripts/deployExchange";
+
+async function randomKp() {
+    let mnemonics = await mnemonicNew();
+    return mnemonicToPrivateKey(mnemonics);
+}
 
 describe('Exchange', () => {
     let code: Cell;
+    let blockchain: Blockchain;
+    let exchange: SandboxContract<Exchange>;
+    let kp: KeyPair;
+    let owner: SandboxContract<TreasuryContract>;
 
     beforeAll(async () => {
         code = await compile('Exchange');
     });
 
-    let blockchain: Blockchain;
-    let exchange: SandboxContract<Exchange>;
-
     beforeEach(async () => {
         blockchain = await Blockchain.create();
+        kp = await randomKp();
+        owner = await blockchain.treasury('owner');
 
-        exchange = blockchain.openContract(Exchange.createFromConfig({}, code));
+        exchange = blockchain.openContract(Exchange.createFromConfig({
+            addresses: getAddresses(),
+            supplies: getSupplies(),
+            fees: getFees()
+        }, code));
 
         const deployer = await blockchain.treasury('deployer');
 
