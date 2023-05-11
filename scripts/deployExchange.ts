@@ -1,11 +1,12 @@
-import {toNano, beginCell, Cell} from 'ton-core';
+import {toNano, beginCell, Cell, Dictionary} from 'ton-core';
 import {Exchange} from '../wrappers/Exchange';
 import {compile, NetworkProvider} from '@ton-community/blueprint';
-import {Addresses} from "../helpers/addresses";
+import {Blockchain} from "@ton-community/sandbox";
+import {crc32} from "../helpers/crc32";
 
 export async function run(provider: NetworkProvider) {
     const exchange = provider.open(Exchange.createFromConfig({
-        addresses: getAddresses(),
+        addresses: await getAddresses(),
         supplies: getSupplies(),
         fees: getFees()
     }, await compile('Exchange')));
@@ -17,12 +18,20 @@ export async function run(provider: NetworkProvider) {
     // run methods on `exchange`
 }
 
-export function getAddresses() {
+export async function getAddresses() {
+    let blockchain: Blockchain;
+    blockchain = await Blockchain.create();
+
+    const tonStorage = await blockchain.treasury("ton_storage");
+    const betMinter = await blockchain.treasury("bet_minter");
+    const govMinter = await blockchain.treasury("gov_minter");
+    const gov = await blockchain.treasury("gov");
+
     return beginCell()
-        .storeAddress(Addresses.tonStorage)
-        .storeAddress(Addresses.betMinter)
-        .storeAddress(Addresses.govMinter)
-        .storeAddress(Addresses.gov)
+        .storeAddress(tonStorage.address)
+        .storeAddress(betMinter.address)
+        .storeAddress(govMinter.address)
+        .storeRef(beginCell().storeAddress(gov.address))
         .endCell();
 }
 
@@ -35,12 +44,12 @@ export function getSupplies() {
 }
 
 export function getFees() {
-    return beginCell()
-        .storeRef(getFee(1000)) // bet buy
-        .storeRef(getFee(1000)) // bet sell
-        .storeRef(getFee(1000)) // gov buy
-        .storeRef(getFee(1000)) // gov sell
-        .endCell();
+    const dict = Dictionary.empty(Dictionary.Keys.Uint(32), Dictionary.Values.Cell())
+    dict.set(crc32("bet_buy_fee"), getFee(1000));
+    dict.set(crc32("bet_sell_fee"), getFee(500));
+    dict.set(crc32("gov_buy_fee"), getFee(200));
+    dict.set(crc32("gov_buy_fee"), getFee(100));
+    return dict;
 }
 
 function getFee(value: number): Cell {

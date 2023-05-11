@@ -3,19 +3,14 @@ import {Cell, toNano} from 'ton-core';
 import {Exchange} from '../wrappers/Exchange';
 import '@ton-community/test-utils';
 import {compile} from '@ton-community/blueprint';
-import {KeyPair, mnemonicNew, mnemonicToPrivateKey} from "ton-crypto";
 import {getAddresses, getFees, getSupplies} from "../scripts/deployExchange";
+import {Opcodes} from "../helpers/opcodes";
 
-async function randomKp() {
-    let mnemonics = await mnemonicNew();
-    return mnemonicToPrivateKey(mnemonics);
-}
 
 describe('Exchange', () => {
     let code: Cell;
     let blockchain: Blockchain;
     let exchange: SandboxContract<Exchange>;
-    let kp: KeyPair;
     let owner: SandboxContract<TreasuryContract>;
 
     beforeAll(async () => {
@@ -24,11 +19,10 @@ describe('Exchange', () => {
 
     beforeEach(async () => {
         blockchain = await Blockchain.create();
-        kp = await randomKp();
         owner = await blockchain.treasury('owner');
 
         exchange = blockchain.openContract(Exchange.createFromConfig({
-            addresses: getAddresses(),
+            addresses: await getAddresses(),
             supplies: getSupplies(),
             fees: getFees()
         }, code));
@@ -48,5 +42,28 @@ describe('Exchange', () => {
     it('should deploy', async () => {
         // the check is done inside beforeEach
         // blockchain and exchange are ready to use
+    });
+
+    it('should buy BET', async () => {
+        const sender = await blockchain.treasury("ton_storage");
+        const betMinter = await blockchain.treasury("bet_minter");
+        const buyBetResult = await exchange.sendBuyBet(sender.getSender(), toNano(10));
+
+        expect(buyBetResult.transactions).toHaveTransaction({
+            from: sender.address,
+            to: exchange.address,
+            success: true,
+        });
+
+        expect(buyBetResult.transactions).toHaveTransaction({
+            from: exchange.address,
+            to: betMinter.address,
+            op: Opcodes.mint,
+            success: true,
+        });
+
+        const [tonSupply, betSupply, _] = await exchange.getSupplies();
+        expect(tonSupply).toEqual(toNano(10));
+        expect(betSupply).toEqual(toNano(9));
     });
 });
