@@ -1,3 +1,8 @@
+int error::invalid_sender_addr() asm "100 PUSHINT";
+int error::dict_value_not_found() asm "101 PUSHINT";
+int error::invalid_amount() asm "102 PUSHINT";
+int error::invalid_supply() asm "103 PUSHINT";
+
 int error::wrong_ton_storage_addr() asm "100 PUSHINT";
 int error::wrong_bet_minter_addr() asm "100 PUSHINT";
 int error::wrong_gov_minter_addr() asm "100 PUSHINT";
@@ -5,13 +10,10 @@ int error::wrong_minter_addr() asm "100 PUSHINT";
 int error::wrong_vote_addr() asm "100 PUSHINT";
 int error::wrong_exhange_addr() asm "100 PUSHINT";
 
-int error::invalid_sender_addr() asm "100 PUSHINT";
 int error::invalid_bet_amount() asm "100 PUSHINT";
 int error::invalid_ton_amount() asm "100 PUSHINT";
 int error::invalid_gov_amount() asm "100 PUSHINT";
-int error::invalid_amount() asm "100 PUSHINT";
-int error::invalid_supply() asm "100 PUSHINT";
 int error::invalid_op_code() asm "100 PUSHINT";
 int error::invalid_setting_format() asm "100 PUSHINT";
 
-int error::dict_value_not_found() asm "100 PUSHINT";
+

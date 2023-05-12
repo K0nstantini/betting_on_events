@@ -61,6 +61,33 @@ export class Exchange implements Contract {
         });
     }
 
+    async sendSellBet(provider: ContractProvider, via: Sender, value: bigint) {
+        await provider.internal(via, {
+            value: '0.02',
+            sendMode: SendMode.PAY_GAS_SEPARATELY,
+            body: beginCell()
+                .storeUint(Opcodes.burnNotification, 32)
+                .storeUint(Date.now(),64)
+                .storeAddress(randomAddress())
+                .storeCoins(value)
+                .storeUint(Opcodes.burnedBetForTon, 32)
+                .endCell(),
+        });
+    }
+    async sendBuyGov(provider: ContractProvider, via: Sender, value: bigint) {
+        await provider.internal(via, {
+            value: '0.02',
+            sendMode: SendMode.PAY_GAS_SEPARATELY,
+            body: beginCell()
+                .storeUint(Opcodes.burnNotification, 32)
+                .storeUint(Date.now(),64)
+                .storeAddress(randomAddress())
+                .storeCoins(value)
+                .storeUint(Opcodes.burnedBetForGov, 32)
+                .endCell(),
+        });
+    }
+
     async getSupplies(provider: ContractProvider) {
         const result = await provider.get('get_exchange_data', []);
         result.stack.readCell();

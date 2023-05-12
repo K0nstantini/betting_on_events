@@ -7,9 +7,10 @@
 #include "imports/params.fc";
 
 const min_ton_for_storage = 10000000; ;; 0.01 TON
-const transaction_gas = 10000000; ;; 0.01 TON
 const fee_accuracy = 10000; ;; 0.01
+const bet_accuracy = 100000; ;; 0.01
 const gov_start_price = 10000;
+const transaction_gas = 10000000; ;; 0.01 TON
 
 const bet_buy_fee = "bet_buy_fee"c;
 const bet_sell_fee = "bet_sell_fee"c;
@@ -83,10 +84,11 @@ int get_fee(int amount, cell dic, int id) impure inline_ref {
 
 int bet_for_ton(int amount, cell fees) impure inline {
     int fee = get_fee(amount, fees, bet_buy_fee);
-    return amount - fee;
+    return (amount - fee) / bet_accuracy;
 }
 
 int ton_for_bet(int amount, cell fees) inline {
+    amount *= bet_accuracy;
     int fee = get_fee(amount, fees, bet_sell_fee);
     return amount - fee;
 }
@@ -96,7 +98,7 @@ int gov_for_bet(int amount, int gov_supply, int bet_supply, int ton_supply, cell
     if (gov_supply > 0) {
         return muldiv(amount - fee, ton_supply - bet_supply, gov_supply);
     } else {
-        return (amount - fee) * gov_start_price;
+        return (amount - fee) / gov_start_price;
     }
 }
 
