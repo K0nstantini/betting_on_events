@@ -70,7 +70,7 @@ describe('Exchange', () => {
 
         const [tonSupply, betSupply, _] = await exchange.getSupplies();
         expect(tonSupply).toEqual(toNano(10));
-        expect(betSupply).toEqual(90_000n);
+        expect(betSupply).toEqual(9_000n);
     });
 
     it('should not allow to buy BET', async () => {
@@ -90,7 +90,7 @@ describe('Exchange', () => {
         // const supplies = await exchange.getSupplies();
         // console.log(supplies);
 
-        const sellBetResult = await exchange.sendSellBet(betMinter.getSender(), 80_000n);
+        const sellBetResult = await exchange.sendSellBet(betMinter.getSender(), 8_000n);
 
         expect(sellBetResult.transactions).toHaveTransaction({
             from: betMinter.address,
@@ -107,12 +107,12 @@ describe('Exchange', () => {
 
         const [tonSupply, betSupply, _] = await exchange.getSupplies();
         expect(tonSupply).toEqual(toNano("2.4"));
-        expect(betSupply).toEqual(10_000n);
+        expect(betSupply).toEqual(1_000n);
     });
 
 
     it('should not allow to sell BET', async () => {
-        const sellBetResult = await exchange.sendSellBet(randomSender.getSender(), 80_000n);
+        const sellBetResult = await exchange.sendSellBet(randomSender.getSender(), 8_000n);
 
         expect(sellBetResult.transactions).toHaveTransaction({
             from: randomSender.address,
@@ -125,7 +125,7 @@ describe('Exchange', () => {
     it('should buy GOV', async () => {
         await exchange.sendBuyBet(tonStorage.getSender(), toNano(10));
 
-        const buyGovResult = await exchange.sendBuyGov(betMinter.getSender(), 51_000n);
+        let buyGovResult = await exchange.sendBuyGov(betMinter.getSender(), 5_000n);
 
         expect(buyGovResult.transactions).toHaveTransaction({
             from: betMinter.address,
@@ -140,9 +140,64 @@ describe('Exchange', () => {
             success: true,
         });
 
+        let [tonSupply, betSupply, govSupply] = await exchange.getSupplies();
+        expect(tonSupply).toEqual(toNano(10));
+        expect(betSupply).toEqual(4_000n);
+        expect(govSupply).toEqual(4n);
+
+        buyGovResult = await exchange.sendBuyGov(betMinter.getSender(), 1_530n);
+
+        expect(buyGovResult.transactions).toHaveTransaction({
+            from: betMinter.address,
+            to: exchange.address,
+            success: true,
+        });
+
+        expect(buyGovResult.transactions).toHaveTransaction({
+            from: exchange.address,
+            to: govMinter.address,
+            op: Opcodes.mint,
+            success: true,
+        });
+
+         [tonSupply, betSupply, govSupply] = await exchange.getSupplies();
+        expect(tonSupply).toEqual(toNano(10));
+        expect(betSupply).toEqual(2_470n);
+        expect(govSupply).toEqual(5n);
+    });
+
+    it('should not allow to buy GOV', async () => {
+        const buyGOVResult = await exchange.sendBuyGov(randomSender.getSender(), 5_000n);
+
+        expect(buyGOVResult.transactions).toHaveTransaction({
+            from: randomSender.address,
+            to: exchange.address,
+            success: false,
+            exitCode: 100
+        });
+    });
+
+    it('should sell GOV', async () => {
+        await exchange.sendBuyBet(tonStorage.getSender(), toNano(10));
+        await exchange.sendBuyGov(betMinter.getSender(), 5_000n);
+        const sellGovResult = await exchange.sendSellGov(govMinter.getSender(), 3n);
+
+        expect(sellGovResult.transactions).toHaveTransaction({
+            from: govMinter.address,
+            to: exchange.address,
+            success: true,
+        });
+
+        expect(sellGovResult.transactions).toHaveTransaction({
+            from: exchange.address,
+            to: betMinter.address,
+            op: Opcodes.mint,
+            success: true,
+        });
+
         const [tonSupply, betSupply, govSupply] = await exchange.getSupplies();
         expect(tonSupply).toEqual(toNano(10));
-        expect(betSupply).toEqual(39_000n);
-        expect(govSupply).toEqual(5n);
+        expect(betSupply).toEqual(8_455n);
+        expect(govSupply).toEqual(1n);
     });
 });
