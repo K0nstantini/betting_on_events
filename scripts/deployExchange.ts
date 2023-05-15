@@ -57,9 +57,9 @@ function getFee(value: number): Cell {
         .storeUint(0, 2)
         .storeInt(value, 16)          // value
         .storeInt(0, 16)        // min
-        .storeInt(2_000, 16)    // max
-        .storeUint(1_000, 14)   // step
+        .storeInt(2000, 16)    // max
+        .storeUint(1000, 14)   // step
         .storeUint(100, 14)     // min step
-        .storeUint(2_000, 14)   // max step
+        .storeUint(2000, 14)   // max step
         .endCell();
 }

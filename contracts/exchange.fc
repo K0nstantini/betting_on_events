@@ -108,8 +108,8 @@ int bet_for_gov(int amount, int gov_supply, int bet_supply, int ton_supply, cell
     return amount - fee;
 }
 
-int change_setting(int value, int min, int max, int sign) inline {
-    value += muldiv((max - min), value, fee_accuracy) * sign;
+int change_setting(int value, int step, int min, int max, int sign) inline {
+    value += muldiv((max - min), step, fee_accuracy) * sign;
     return (sign > 0) ?
             ((value > max) ? max : value) :
             ((value < min) ? min : value);
@@ -200,27 +200,30 @@ int change_setting(int value, int min, int max, int sign) inline {
         throw_unless(error::invalid_sender_addr(), equal_slices(sender_addr, gov_contract));
 
         int id = in_msg_body~load_uint(32);
-        int change_op = in_msg_body~load_uint(2); ;; 0/1 - inc/dec value, 2/3 - inc/dec step
+        int op_target = in_msg_body~load_uint(1); ;; 0/1 - value/step
+        int op_direction = in_msg_body~load_uint(1); ;; 0/1 - inc/dec
 
-        (slice payload, int success) = fees.udict_get?(32, id);
+        (cell payload, int success) = fees.udict_get_ref?(32, id);
         throw_unless(error::dict_value_not_found(), success);
 
-        payload~skip_bits(2); ;; always 0, others - reserve
-        int value = payload~load_int(16);
-        int min_value = payload~load_int(16);
-        int max_value = payload~load_int(16);
-        int step = payload~load_uint(14);
-        int min_step = payload~load_uint(14);
-        int max_step = payload~load_uint(14);
+        slice ds = payload.begin_parse();
+        ds~skip_bits(2); ;; always 0, others - reserve
+        int value = ds~load_int(16);
+        int min_value = ds~load_int(16);
+        int max_value = ds~load_int(16);
+        int step = ds~load_uint(14);
+        int min_step = ds~load_uint(14);
+        int max_step = ds~load_uint(14);
 
-        int sign = change_op % 2 == 0 ? 1 : -1;
-        if (change_op < 2) {
-            value = change_setting(value, min_value, max_value, sign);
+        int sign = op_direction ? -1 : 1;
+        if (op_target) {
+            step = change_setting(step, step, min_step, max_step, sign);
         } else {
-            step = change_setting(step, min_step, max_step, sign);
+            value = change_setting(value, step, min_value, max_value, sign);
         }
 
         cell fee = begin_cell()
+                .store_uint(0, 2)
                 .store_int(value, 16)
                 .store_int(min_value, 16)
                 .store_int(max_value, 16)
@@ -228,7 +231,7 @@ int change_setting(int value, int min, int max, int sign) inline {
                 .store_uint(min_step, 14)
                 .store_uint(max_step, 14)
                 .end_cell();
-        fees~udict_set(32, id, fee.begin_parse());
+        fees~udict_set_ref(32, id, fee);
 
         save_data(addresses, supplies, fees);
         return ();

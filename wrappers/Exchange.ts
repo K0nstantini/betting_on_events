@@ -11,6 +11,7 @@ import {
 } from 'ton-core';
 import {Opcodes} from "../helpers/opcodes";
 import {randomAddress} from "@ton-community/test-utils";
+import {crc32} from "../helpers/crc32";
 
 export type ExchangeConfig = {
     addresses: Cell,
@@ -25,6 +26,10 @@ export function exchangeConfigToCell(config: ExchangeConfig): Cell {
         .storeDict(config.fees)
         .endCell();
 }
+
+export enum ChangeSettingsDirection { Up, Down }
+
+export enum SettingsTarget { Value, Step }
 
 export class Exchange implements Contract {
     constructor(readonly address: Address, readonly init?: { code: Cell; data: Cell }) {
@@ -54,7 +59,7 @@ export class Exchange implements Contract {
             sendMode: SendMode.PAY_GAS_SEPARATELY,
             body: beginCell()
                 .storeUint(Opcodes.depositTon, 32)
-                .storeUint(Date.now(),64)
+                .storeUint(Date.now(), 64)
                 .storeAddress(randomAddress())
                 .storeCoins(value)
                 .endCell(),
@@ -67,20 +72,21 @@ export class Exchange implements Contract {
             sendMode: SendMode.PAY_GAS_SEPARATELY,
             body: beginCell()
                 .storeUint(Opcodes.burnNotification, 32)
-                .storeUint(Date.now(),64)
+                .storeUint(Date.now(), 64)
                 .storeAddress(randomAddress())
                 .storeCoins(value)
                 .storeUint(Opcodes.burnedBetForTon, 32)
                 .endCell(),
         });
     }
+
     async sendBuyGov(provider: ContractProvider, via: Sender, value: bigint) {
         await provider.internal(via, {
             value: '0.02',
             sendMode: SendMode.PAY_GAS_SEPARATELY,
             body: beginCell()
                 .storeUint(Opcodes.burnNotification, 32)
-                .storeUint(Date.now(),64)
+                .storeUint(Date.now(), 64)
                 .storeAddress(randomAddress())
                 .storeCoins(value)
                 .storeUint(Opcodes.burnedBetForGov, 32)
@@ -94,9 +100,24 @@ export class Exchange implements Contract {
             sendMode: SendMode.PAY_GAS_SEPARATELY,
             body: beginCell()
                 .storeUint(Opcodes.burnNotification, 32)
-                .storeUint(Date.now(),64)
+                .storeUint(Date.now(), 64)
                 .storeAddress(randomAddress())
                 .storeCoins(value)
+                .endCell(),
+        });
+    }
+
+    async sendChangeFeeValue(provider: ContractProvider, via: Sender, name: string,
+                             target: SettingsTarget, direction: ChangeSettingsDirection) {
+        await provider.internal(via, {
+            value: '0.02',
+            sendMode: SendMode.PAY_GAS_SEPARATELY,
+            body: beginCell()
+                .storeUint(Opcodes.changeSettings, 32)
+                .storeUint(Date.now(), 64)
+                .storeUint(crc32(name), 32)
+                .storeUint(target, 1)
+                .storeUint(direction, 1)
                 .endCell(),
         });
     }
@@ -122,15 +143,15 @@ export class Exchange implements Contract {
         return [tonStorage, betMinter, govMinter, gov];
     }
 
-    async getFees(provider: ContractProvider, key: number) {
+    async getFees(provider: ContractProvider, key: string) {
         const result = await provider.get('get_exchange_data', []);
         result.stack.readCell();
         result.stack.readCell();
         const fees = result.stack.readCell();
         const ds = fees.beginParse();
         const dic = ds.loadDictDirect(Dictionary.Keys.Uint(32), Dictionary.Values.Cell());
-        const fee = dic.get(key);
-        if (!fee) return null;
+        const fee = dic.get(crc32(key));
+        if (!fee) throw 'Fee not found';
         const dsFee = fee?.beginParse();
         dsFee.skip(2);
         const value = dsFee?.loadInt(16);

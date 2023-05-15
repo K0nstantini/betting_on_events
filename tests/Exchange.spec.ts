@@ -1,6 +1,6 @@
 import {Blockchain, SandboxContract, TreasuryContract} from '@ton-community/sandbox';
 import {Cell, toNano} from 'ton-core';
-import {Exchange} from '../wrappers/Exchange';
+import {ChangeSettingsDirection, Exchange, SettingsTarget} from '../wrappers/Exchange';
 import '@ton-community/test-utils';
 import {compile} from '@ton-community/blueprint';
 import {getAddresses, getFees, getSupplies} from "../scripts/deployExchange";
@@ -16,6 +16,7 @@ describe('Exchange', () => {
     let tonStorage: SandboxContract<TreasuryContract>;
     let betMinter: SandboxContract<TreasuryContract>;
     let govMinter: SandboxContract<TreasuryContract>;
+    let govContract: SandboxContract<TreasuryContract>;
 
     beforeAll(async () => {
         code = await compile('Exchange');
@@ -28,6 +29,7 @@ describe('Exchange', () => {
         betMinter = await blockchain.treasury("bet_minter");
         govMinter = await blockchain.treasury("gov_minter");
         randomSender = await blockchain.treasury("random");
+        govContract = await blockchain.treasury("gov");
 
         exchange = blockchain.openContract(Exchange.createFromConfig({
             addresses: await getAddresses(),
@@ -160,7 +162,7 @@ describe('Exchange', () => {
             success: true,
         });
 
-         [tonSupply, betSupply, govSupply] = await exchange.getSupplies();
+        [tonSupply, betSupply, govSupply] = await exchange.getSupplies();
         expect(tonSupply).toEqual(toNano(10));
         expect(betSupply).toEqual(2_470n);
         expect(govSupply).toEqual(5n);
@@ -200,4 +202,116 @@ describe('Exchange', () => {
         expect(betSupply).toEqual(8_455n);
         expect(govSupply).toEqual(1n);
     });
+
+    it('should not allow to sell GOV', async () => {
+        const sellGOVResult = await exchange.sendSellGov(randomSender.getSender(), 1n);
+
+        expect(sellGOVResult.transactions).toHaveTransaction({
+            from: randomSender.address,
+            to: exchange.address,
+            success: false,
+            exitCode: 100
+        });
+    });
+
+    it('should change settings value inc', async () => {
+        await change_settings(
+            SettingsTarget.Value,
+            ChangeSettingsDirection.Up,
+            {
+                betBuy: [1200, 1000],
+                betSell: [700, 1000],
+                govBuy: [400, 1000],
+                govSell: [300, 1000],
+            });
+    });
+
+    it('should change settings value dec', async () => {
+        await change_settings(
+            SettingsTarget.Value,
+            ChangeSettingsDirection.Down,
+            {
+                betBuy: [800, 1000],
+                betSell: [300, 1000],
+                govBuy: [0, 1000],
+                govSell: [0, 1000],
+            });
+    });
+
+
+    it('should change settings step inc', async () => {
+        await change_settings(
+            SettingsTarget.Step,
+            ChangeSettingsDirection.Up,
+            {
+                betBuy: [1000, 1190],
+                betSell: [500, 1190],
+                govBuy: [200, 1190],
+                govSell: [100, 1190],
+            });
+    });
+
+
+    it('should change settings step dec', async () => {
+        await change_settings(
+            SettingsTarget.Step,
+            ChangeSettingsDirection.Down,
+            {
+                betBuy: [1000, 810],
+                betSell: [500, 810],
+                govBuy: [200, 810],
+                govSell: [100, 810],
+            });
+    });
+
+    async function change_settings(target: SettingsTarget, direction: ChangeSettingsDirection,
+                                   expected: {
+                                       betBuy: [number, number],
+                                       betSell: [number, number],
+                                       govBuy: [number, number],
+                                       govSell: [number, number],
+                                   }
+    ) {
+        const sender = govContract.getSender();
+
+        const buyBetResult = await exchange.sendChangeFeeValue(sender, "bet_buy_fee", target, direction);
+        const sellBetResult = await exchange.sendChangeFeeValue(sender, "bet_sell_fee", target, direction);
+        const buyGovResult = await exchange.sendChangeFeeValue(sender, "gov_buy_fee", target, direction);
+        const sellGovResult = await exchange.sendChangeFeeValue(sender, "gov_sell_fee", target, direction);
+
+        expect(buyBetResult.transactions).toHaveTransaction({
+            from: govContract.address,
+            to: exchange.address,
+            success: true,
+        });
+
+        expect(sellBetResult.transactions).toHaveTransaction({
+            from: govContract.address,
+            to: exchange.address,
+            success: true,
+        });
+
+        expect(buyGovResult.transactions).toHaveTransaction({
+            from: govContract.address,
+            to: exchange.address,
+            success: true,
+        });
+
+        expect(sellGovResult.transactions).toHaveTransaction({
+            from: govContract.address,
+            to: exchange.address,
+            success: true,
+        });
+
+        const {value: valueBetBuy, step: stepBetBuy} = await exchange.getFees("bet_buy_fee");
+        const {value: valueBetSell, step: stepBetSell} = await exchange.getFees("bet_sell_fee");
+        const {value: valueGovBuy, step: stepGovBuy} = await exchange.getFees("gov_buy_fee");
+        const {value: valueGovSell, step: stepGovSell} = await exchange.getFees("gov_sell_fee");
+
+        expect([valueBetBuy, stepBetBuy]).toEqual(expected.betBuy);
+        expect([valueBetSell, stepBetSell]).toEqual(expected.betSell);
+        expect([valueGovBuy, stepGovBuy]).toEqual(expected.govBuy);
+        expect([valueGovSell, stepGovSell]).toEqual(expected.govSell);
+    }
+
 });
