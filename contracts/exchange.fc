@@ -4,7 +4,6 @@
 #include "imports/errors.fc";
 #include "imports/messages.fc";
 #include "imports/op-codes.fc";
-#include "imports/params.fc";
 
 const min_ton_for_storage = 10000000; ;; 0.01 TON
 const fee_accuracy = 10000; ;; 0.01

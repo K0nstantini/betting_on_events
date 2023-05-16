@@ -4,3 +4,4 @@ int error::invalid_amount() asm "102 PUSHINT";
 int error::invalid_supply() asm "103 PUSHINT";
 int error::invalid_setting_format() asm "104 PUSHINT";
 int error::invalid_op_code() asm "105 PUSHINT";
+int error::not_enough_gas_amount() asm "106 PUSHINT";
