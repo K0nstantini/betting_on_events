@@ -200,8 +200,9 @@ int change_setting(int value, int step, int min, int max, int sign) inline {
         throw_unless(error::invalid_sender_addr(), equal_slices(sender_addr, gov_contract));
 
         int id = in_msg_body~load_uint(32);
-        int op_target = in_msg_body~load_uint(1); ;; 0/1 - value/step
-        int op_direction = in_msg_body~load_uint(1); ;; 0/1 - inc/dec
+        slice ds = in_msg_body~load_ref().begin_parse();
+        int op_target = ds~load_uint(1); ;; 0/1 - value/step
+        int op_direction = ds~load_uint(1); ;; 0/1 - inc/dec
 
         (cell payload, int success) = fees.udict_get_ref?(32, id);
         throw_unless(error::dict_value_not_found(), success);
@@ -234,6 +235,27 @@ int change_setting(int value, int step, int min, int max, int sign) inline {
         fees~udict_set_ref(32, id, fee);
 
         save_data(addresses, supplies, fees);
+        return ();
+    }
+
+    if (op == op::check_settings_format()) {
+        throw_unless(error::invalid_sender_addr(), equal_slices(sender_addr, gov_contract));
+
+        int id = in_msg_body~load_uint(32);
+        slice ds = in_msg_body~load_ref().begin_parse();
+        ds~skip_bits(2);
+        throw_unless(error::invalid_setting_format(), ds.slice_empty?());
+
+        (_, int success) = fees.udict_get_ref?(32, id);
+        throw_unless(error::dict_value_not_found(), success);
+
+        var msg_body = begin_cell()
+                .store_uint(op::confirm(), 32)
+                .store_uint(query_id, 64)
+                .store_uint(id, 32)
+                .end_cell();
+
+        messages::send_simple(gov_contract, msg_body, send_mode:normal(), transaction_gas);
         return ();
     }
 

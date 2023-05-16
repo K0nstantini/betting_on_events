@@ -116,8 +116,29 @@ export class Exchange implements Contract {
                 .storeUint(Opcodes.changeSettings, 32)
                 .storeUint(Date.now(), 64)
                 .storeUint(crc32(name), 32)
-                .storeUint(target, 1)
-                .storeUint(direction, 1)
+                .storeRef(beginCell()
+                    .storeUint(target, 1)
+                    .storeUint(direction, 1)
+                    .endCell()
+                )
+                .endCell(),
+        });
+    }
+
+
+    async sendCheckSettingsFormat(provider: ContractProvider, via: Sender, name: string) {
+        await provider.internal(via, {
+            value: '0.02',
+            sendMode: SendMode.PAY_GAS_SEPARATELY,
+            body: beginCell()
+                .storeUint(Opcodes.checkSettingsFormat, 32)
+                .storeUint(Date.now(), 64)
+                .storeUint(crc32(name), 32)
+                .storeRef(beginCell()
+                    .storeUint(0, 1)
+                    .storeUint(0, 1)
+                    .endCell()
+                )
                 .endCell(),
         });
     }

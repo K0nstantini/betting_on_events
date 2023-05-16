@@ -314,4 +314,34 @@ describe('Exchange', () => {
         expect([valueGovSell, stepGovSell]).toEqual(expected.govSell);
     }
 
+    it('should confirm settings format', async () => {
+        const checkResult = await exchange.sendCheckSettingsFormat(govContract.getSender(), "bet_buy_fee");
+
+        expect(checkResult.transactions).toHaveTransaction({
+            from: govContract.address,
+            to: exchange.address,
+            success: true,
+        });
+
+    });
+
+    it('should not confirm settings format', async () => {
+        let checkResult = await exchange.sendCheckSettingsFormat(randomSender.getSender(), "bet_buy_fee");
+
+        expect(checkResult.transactions).toHaveTransaction({
+            from: randomSender.address,
+            to: exchange.address,
+            success: false,
+        });
+
+        checkResult = await exchange.sendCheckSettingsFormat(govContract.getSender(), "bad_setting");
+
+        expect(checkResult.transactions).toHaveTransaction({
+            from: govContract.address,
+            to: exchange.address,
+            success: false,
+        });
+
+    });
+
 });
