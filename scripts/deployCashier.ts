@@ -1,21 +1,21 @@
 import {toNano, beginCell, Cell, Dictionary} from 'ton-core';
-import {Exchange} from '../wrappers/Exchange';
+import {Cashier} from '../wrappers/Cashier';
 import {compile, NetworkProvider} from '@ton-community/blueprint';
 import {Blockchain} from "@ton-community/sandbox";
 import {crc32} from "../helpers/crc32";
 
 export async function run(provider: NetworkProvider) {
-    const exchange = provider.open(Exchange.createFromConfig({
+    const cashier = provider.open(Cashier.createFromConfig({
         addresses: await getAddresses(),
         supplies: getSupplies(),
         fees: getFees()
-    }, await compile('Exchange')));
+    }, await compile('Cashier')));
 
-    await exchange.sendDeploy(provider.sender(), toNano('0.05'));
+    await cashier.sendDeploy(provider.sender(), toNano('0.05'));
 
-    await provider.waitForDeploy(exchange.address);
+    await provider.waitForDeploy(cashier.address);
 
-    // run methods on `exchange`
+    // run methods on `cashier`
 }
 
 export async function getAddresses() {

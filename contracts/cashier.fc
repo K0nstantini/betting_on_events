@@ -261,6 +261,6 @@ int change_setting(int value, int step, int min, int max, int sign) inline {
     throw(0xffff);
 }
 
-(cell, cell, cell) get_exchange_data() method_id {
+(cell, cell, cell) get_cashier_data() method_id {
     return load_data();
 }

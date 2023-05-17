@@ -12,14 +12,14 @@ export async function run(provider: NetworkProvider) {
 
     await provider.waitForDeploy(vault.address);
 
-    // run methods on `exchange`
+    // run methods on `cashier`
 }
 
 export async function getAddress() {
     let blockchain: Blockchain;
     blockchain = await Blockchain.create();
 
-    const exchange = await blockchain.treasury("exchange");
-    return exchange.address;
+    const cashier = await blockchain.treasury("cashier");
+    return cashier.address;
 
 }

@@ -11,7 +11,7 @@ describe('Vault', () => {
     let blockchain: Blockchain;
     let vault: SandboxContract<Vault>;
     let owner: SandboxContract<TreasuryContract>;
-    let exchange: SandboxContract<TreasuryContract>;
+    let cashier: SandboxContract<TreasuryContract>;
     let randomSender: SandboxContract<TreasuryContract>;
 
     beforeAll(async () => {
@@ -21,7 +21,7 @@ describe('Vault', () => {
     beforeEach(async () => {
         blockchain = await Blockchain.create();
         owner = await blockchain.treasury('owner');
-        exchange = await blockchain.treasury("exchange");
+        cashier = await blockchain.treasury("cashier");
         randomSender = await blockchain.treasury("random");
 
         vault = blockchain.openContract(Vault.createFromConfig({
@@ -42,7 +42,7 @@ describe('Vault', () => {
 
     it('should deploy', async () => {
         // the check is done inside beforeEach
-        // blockchain and exchange are ready to use
+        // blockchain and cashier are ready to use
     });
 
     it('should Deposit', async () => {
@@ -58,7 +58,7 @@ describe('Vault', () => {
 
         expect(depositResult.transactions).toHaveTransaction({
             from: vault.address,
-            to: exchange.address,
+            to: cashier.address,
             success: true,
         });
 
@@ -80,11 +80,11 @@ describe('Vault', () => {
         await vault.sendDeposit(randomSender.getSender(), toNano(10));
 
         const withdrawResult = await vault.sendWithdraw(
-            exchange.getSender(), randomSender.address, toNano(5)
+            cashier.getSender(), randomSender.address, toNano(5)
         );
 
         expect(withdrawResult.transactions).toHaveTransaction({
-            from: exchange.address,
+            from: cashier.address,
             to: vault.address,
             success: true,
         });

@@ -13,13 +13,13 @@ import {Opcodes} from "../helpers/opcodes";
 import {randomAddress} from "@ton-community/test-utils";
 import {crc32} from "../helpers/crc32";
 
-export type ExchangeConfig = {
+export type CashierConfig = {
     addresses: Cell,
     supplies: Cell,
     fees: Dictionary<number, Cell>
 };
 
-export function exchangeConfigToCell(config: ExchangeConfig): Cell {
+export function cashierConfigToCell(config: CashierConfig): Cell {
     return beginCell()
         .storeRef(config.addresses)
         .storeRef(config.supplies)
@@ -31,18 +31,18 @@ export enum ChangeSettingsDirection { Up, Down }
 
 export enum SettingsTarget { Value, Step }
 
-export class Exchange implements Contract {
+export class Cashier implements Contract {
     constructor(readonly address: Address, readonly init?: { code: Cell; data: Cell }) {
     }
 
     static createFromAddress(address: Address) {
-        return new Exchange(address);
+        return new Cashier(address);
     }
 
-    static createFromConfig(config: ExchangeConfig, code: Cell, workchain = 0) {
-        const data = exchangeConfigToCell(config);
+    static createFromConfig(config: CashierConfig, code: Cell, workchain = 0) {
+        const data = cashierConfigToCell(config);
         const init = {code, data};
-        return new Exchange(contractAddress(workchain, init), init);
+        return new Cashier(contractAddress(workchain, init), init);
     }
 
     async sendDeploy(provider: ContractProvider, via: Sender, value: bigint) {
@@ -144,7 +144,7 @@ export class Exchange implements Contract {
     }
 
     async getSupplies(provider: ContractProvider) {
-        const result = await provider.get('get_exchange_data', []);
+        const result = await provider.get('get_cashier_data', []);
         result.stack.readCell();
         const supplies = result.stack.readCell();
         const ds = supplies.beginParse();
@@ -152,7 +152,7 @@ export class Exchange implements Contract {
     }
 
     async getAddresses(provider: ContractProvider) {
-        const result = await provider.get('get_exchange_data', []);
+        const result = await provider.get('get_cashier_data', []);
         let addresses = result.stack.readCell();
         let ds = addresses.beginParse();
         const vault = ds.loadAddress();
@@ -165,7 +165,7 @@ export class Exchange implements Contract {
     }
 
     async getFees(provider: ContractProvider, key: string) {
-        const result = await provider.get('get_exchange_data', []);
+        const result = await provider.get('get_cashier_data', []);
         result.stack.readCell();
         result.stack.readCell();
         const fees = result.stack.readCell();

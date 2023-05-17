@@ -1,11 +1,11 @@
 import {Address, beginCell, Cell, Contract, contractAddress, ContractProvider, Sender, SendMode,} from 'ton-core';
 import {Opcodes} from "../helpers/opcodes";
 
-export type ExchangeConfig = {
+export type CashierConfig = {
     address: Address,
 };
 
-export function vaultConfigToCell(config: ExchangeConfig): Cell {
+export function vaultConfigToCell(config: CashierConfig): Cell {
     return beginCell()
         .storeAddress(config.address)
         .endCell();
@@ -19,7 +19,7 @@ export class Vault implements Contract {
         return new Vault(address);
     }
 
-    static createFromConfig(config: ExchangeConfig, code: Cell, workchain = 0) {
+    static createFromConfig(config: CashierConfig, code: Cell, workchain = 0) {
         const data = vaultConfigToCell(config);
         const init = {code, data};
         return new Vault(contractAddress(workchain, init), init);
@@ -57,7 +57,7 @@ export class Vault implements Contract {
         });
     }
 
-    async getExchangeAddress(provider: ContractProvider) {
+    async getCashierAddress(provider: ContractProvider) {
         const result = await provider.get('get_vault_data', []);
         return result.stack.readAddress();
     }
