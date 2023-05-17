@@ -155,13 +155,13 @@ export class Exchange implements Contract {
         const result = await provider.get('get_exchange_data', []);
         let addresses = result.stack.readCell();
         let ds = addresses.beginParse();
-        const tonStorage = ds.loadAddress();
+        const vault = ds.loadAddress();
         const betMinter = ds.loadAddress();
         const govMinter = ds.loadAddress();
         addresses = ds.loadRef();
         ds = addresses.beginParse();
         const gov = ds.loadAddress();
-        return [tonStorage, betMinter, govMinter, gov];
+        return [vault, betMinter, govMinter, gov];
     }
 
     async getFees(provider: ContractProvider, key: string) {

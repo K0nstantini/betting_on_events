@@ -65,6 +65,6 @@ slice load_data() inline {
     throw(0xffff);
 }
 
-slice get_ton_storage_data() method_id {
+slice get_vault_data() method_id {
     return load_data();
 }

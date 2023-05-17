@@ -5,24 +5,24 @@ export type ExchangeConfig = {
     address: Address,
 };
 
-export function tonStorageConfigToCell(config: ExchangeConfig): Cell {
+export function vaultConfigToCell(config: ExchangeConfig): Cell {
     return beginCell()
         .storeAddress(config.address)
         .endCell();
 }
 
-export class TonStorage implements Contract {
+export class Vault implements Contract {
     constructor(readonly address: Address, readonly init?: { code: Cell; data: Cell }) {
     }
 
     static createFromAddress(address: Address) {
-        return new TonStorage(address);
+        return new Vault(address);
     }
 
     static createFromConfig(config: ExchangeConfig, code: Cell, workchain = 0) {
-        const data = tonStorageConfigToCell(config);
+        const data = vaultConfigToCell(config);
         const init = {code, data};
-        return new TonStorage(contractAddress(workchain, init), init);
+        return new Vault(contractAddress(workchain, init), init);
     }
 
     async sendDeploy(provider: ContractProvider, via: Sender, value: bigint) {
@@ -58,7 +58,7 @@ export class TonStorage implements Contract {
     }
 
     async getExchangeAddress(provider: ContractProvider) {
-        const result = await provider.get('get_ton_storage_data', []);
+        const result = await provider.get('get_vault_data', []);
         return result.stack.readAddress();
     }
 }

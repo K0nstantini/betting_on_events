@@ -36,12 +36,12 @@ const gov_sell_fee = "gov_sell_fee"c;
 
 (slice, slice, slice, slice) get_addresses(cell addresses) inline {
     slice ds = addresses.begin_parse();
-    slice ton_storage = ds~load_msg_addr();
+    slice vault = ds~load_msg_addr();
     slice bet_minter = ds~load_msg_addr();
     slice gov_minter = ds~load_msg_addr();
     ds = ds~load_ref().begin_parse();
     slice gov_contract = ds~load_msg_addr();
-    return (ton_storage, bet_minter, gov_minter, gov_contract);
+    return (vault, bet_minter, gov_minter, gov_contract);
 }
 
 ;; ton, bet, gov
@@ -130,12 +130,12 @@ int change_setting(int value, int step, int min, int max, int sign) inline {
     int query_id = in_msg_body~load_uint(64);
 
     (cell addresses, cell supplies, cell fees) = load_data();
-    (slice ton_storage, slice bet_minter, slice gov_minter, slice gov_contract) = get_addresses(addresses);
+    (slice vault, slice bet_minter, slice gov_minter, slice gov_contract) = get_addresses(addresses);
     (int ton_supply, int bet_supply, int gov_supply) = get_supplies(supplies);
 
     ;; buy BET
     if (op == op::deposit_ton()) {
-        throw_unless(error::invalid_sender_addr(), equal_slices(sender_addr, ton_storage));
+        throw_unless(error::invalid_sender_addr(), equal_slices(sender_addr, vault));
 
         slice to_addr = in_msg_body~load_msg_addr();
         int ton_amount = in_msg_body~load_coins();
@@ -160,7 +160,7 @@ int change_setting(int value, int step, int min, int max, int sign) inline {
                 int ton_amount = ton_for_bet(amount, fees);
 
                 supplies = combine_supplies(ton_supply - ton_amount, bet_supply - amount, gov_supply);
-                send_coins(ton_storage, to_addr, ton_amount, op::withdraw_ton(), query_id);
+                send_coins(vault, to_addr, ton_amount, op::withdraw_ton(), query_id);
 
                 save_data(addresses, supplies, fees);
                 return ();

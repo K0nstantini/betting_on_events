@@ -2,5 +2,5 @@ import { CompilerConfig } from '@ton-community/blueprint';
 
 export const compile: CompilerConfig = {
     lang: 'func',
-    targets: ['contracts/ton_storage.fc'],
+    targets: ['contracts/vault.fc'],
 };

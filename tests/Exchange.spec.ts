@@ -13,7 +13,7 @@ describe('Exchange', () => {
     let exchange: SandboxContract<Exchange>;
     let owner: SandboxContract<TreasuryContract>;
     let randomSender: SandboxContract<TreasuryContract>;
-    let tonStorage: SandboxContract<TreasuryContract>;
+    let vault: SandboxContract<TreasuryContract>;
     let betMinter: SandboxContract<TreasuryContract>;
     let govMinter: SandboxContract<TreasuryContract>;
     let govContract: SandboxContract<TreasuryContract>;
@@ -25,7 +25,7 @@ describe('Exchange', () => {
     beforeEach(async () => {
         blockchain = await Blockchain.create();
         owner = await blockchain.treasury('owner');
-        tonStorage = await blockchain.treasury("ton_storage");
+        vault = await blockchain.treasury("vault");
         betMinter = await blockchain.treasury("bet_minter");
         govMinter = await blockchain.treasury("gov_minter");
         randomSender = await blockchain.treasury("random");
@@ -55,10 +55,10 @@ describe('Exchange', () => {
     });
 
     it('should buy BET', async () => {
-        const buyBetResult = await exchange.sendBuyBet(tonStorage.getSender(), toNano(10));
+        const buyBetResult = await exchange.sendBuyBet(vault.getSender(), toNano(10));
 
         expect(buyBetResult.transactions).toHaveTransaction({
-            from: tonStorage.address,
+            from: vault.address,
             to: exchange.address,
             success: true,
         });
@@ -87,7 +87,7 @@ describe('Exchange', () => {
     });
 
     it('should sell BET', async () => {
-        await exchange.sendBuyBet(tonStorage.getSender(), toNano(10));
+        await exchange.sendBuyBet(vault.getSender(), toNano(10));
 
         // const supplies = await exchange.getSupplies();
         // console.log(supplies);
@@ -102,7 +102,7 @@ describe('Exchange', () => {
 
         expect(sellBetResult.transactions).toHaveTransaction({
             from: exchange.address,
-            to: tonStorage.address,
+            to: vault.address,
             op: Opcodes.withdrawTon,
             success: true,
         });
@@ -125,7 +125,7 @@ describe('Exchange', () => {
     });
 
     it('should buy GOV', async () => {
-        await exchange.sendBuyBet(tonStorage.getSender(), toNano(10));
+        await exchange.sendBuyBet(vault.getSender(), toNano(10));
 
         let buyGovResult = await exchange.sendBuyGov(betMinter.getSender(), 5_000n);
 
@@ -180,7 +180,7 @@ describe('Exchange', () => {
     });
 
     it('should sell GOV', async () => {
-        await exchange.sendBuyBet(tonStorage.getSender(), toNano(10));
+        await exchange.sendBuyBet(vault.getSender(), toNano(10));
         await exchange.sendBuyGov(betMinter.getSender(), 5_000n);
         const sellGovResult = await exchange.sendSellGov(govMinter.getSender(), 3n);
 

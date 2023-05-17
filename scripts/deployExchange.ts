@@ -22,13 +22,13 @@ export async function getAddresses() {
     let blockchain: Blockchain;
     blockchain = await Blockchain.create();
 
-    const tonStorage = await blockchain.treasury("ton_storage");
+    const vault = await blockchain.treasury("vault");
     const betMinter = await blockchain.treasury("bet_minter");
     const govMinter = await blockchain.treasury("gov_minter");
     const gov = await blockchain.treasury("gov");
 
     return beginCell()
-        .storeAddress(tonStorage.address)
+        .storeAddress(vault.address)
         .storeAddress(betMinter.address)
         .storeAddress(govMinter.address)
         .storeRef(beginCell().storeAddress(gov.address))
