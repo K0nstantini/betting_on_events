@@ -30,7 +30,6 @@ slice load_data() inline {
         return ();
     }
 
-
     slice sender_addr = cs~load_msg_addr();
     int op = in_msg_body~load_uint(32);
     int query_id = in_msg_body~load_uint(64);
@@ -49,6 +48,7 @@ slice load_data() inline {
                 .end_cell();
 
         messages::send_simple(exchange_addr, msg_body, send_mode:normal(), transaction_gas);
+        return ();
     }
 
     if (op == op::withdraw_ton()) {
@@ -59,7 +59,12 @@ slice load_data() inline {
         int amount = in_msg_body~load_coins();
 
         messages::send_empty(to_addr, send_mode:normal(), amount);
+        return ();
     }
 
     throw(0xffff);
+}
+
+slice get_ton_storage_data() method_id {
+    return load_data();
 }
