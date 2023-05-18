@@ -1,11 +1,14 @@
 int op::deposit_ton() asm "0x33fcdcc4 PUSHINT";
 int op::withdraw_ton() asm "0x37726bdb PUSHINT";
-int op::burn_notification() asm "0x7bdd97de PUSHINT";
-int op::mint() asm "21 PUSHINT";
 int op::change_settings() asm "0x4abfbc2b PUSHINT";
 int op::check_settings_format() asm "0x35aab65a PUSHINT";
 int op::buy_gov() asm "0xeab9dfd4e PUSHINT";
 int op::confirm() asm "0x8fd3a344 PUSHINT";
+
+int op::burn_notification() asm "0x7bdd97de PUSHINT";
+int op::mint() asm "21 PUSHINT";
+int op::provide_wallet_address() asm "0x2c76b973 PUSHINT";
+int op::take_wallet_address() asm "0xd1735400 PUSHINT";
 
 int op::burned_bet_for_ton() asm "0x6e5e11b2 PUSHINT";
 int op::burned_bet_for_gov() asm "0x635294cd PUSHINT";
