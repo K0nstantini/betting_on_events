@@ -181,8 +181,6 @@ int change_setting(int value, int step, int min, int max, int sign) inline {
                 save_data(addresses, supplies, fees);
                 return ();
             }
-
-            throw(error::invalid_op_code());
         }
 
         ;; sell GOV

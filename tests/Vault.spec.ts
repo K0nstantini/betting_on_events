@@ -109,4 +109,32 @@ describe('Vault', () => {
         });
     });
 
+    it('should change owner', async () => {
+        const changeOwnerResult = await vault.sendChangeOwner(
+            cashier.getSender(), randomSender.address
+        );
+
+        expect(changeOwnerResult.transactions).toHaveTransaction({
+            from: cashier.address,
+            to: vault.address,
+            success: true,
+        });
+
+        const newOwner = await vault.getOwnerAddress();
+        expect(newOwner).toEqualAddress(randomSender.address);
+
+    });
+
+    it('should not allow to change owner', async () => {
+        const changeOwnerResult = await vault.sendChangeOwner(
+            randomSender.getSender(), randomSender.address
+        );
+
+        expect(changeOwnerResult.transactions).toHaveTransaction({
+            from: randomSender.address,
+            to: vault.address,
+            success: false,
+        });
+    });
+
 });

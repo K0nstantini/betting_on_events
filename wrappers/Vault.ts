@@ -57,7 +57,19 @@ export class Vault implements Contract {
         });
     }
 
-    async getCashierAddress(provider: ContractProvider) {
+    async sendChangeOwner(provider: ContractProvider, via: Sender, newOwner: Address) {
+        await provider.internal(via, {
+            value: '0.02',
+            sendMode: SendMode.PAY_GAS_SEPARATELY,
+            body: beginCell()
+                .storeUint(Opcodes.changeAddr, 32)
+                .storeUint(Date.now(), 64)
+                .storeAddress(newOwner)
+                .endCell(),
+        });
+    }
+
+    async getOwnerAddress(provider: ContractProvider) {
         const result = await provider.get('get_vault_data', []);
         return result.stack.readAddress();
     }

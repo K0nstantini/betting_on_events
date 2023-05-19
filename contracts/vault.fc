@@ -34,31 +34,38 @@ slice load_data() inline {
     int op = in_msg_body~load_uint(32);
     int query_id = in_msg_body~load_uint(64);
 
-    slice cashier_addr = load_data();
+    slice owner = load_data();
 
     if (op == op::deposit_ton()) {
-        int gas_require = transaction_gas * 3;
-        throw_unless(error::not_enough_gas_amount(), msg_value > gas_require);
+        int required_gas = transaction_gas * 3;
+        throw_unless(error::not_enough_gas_amount(), msg_value > required_gas);
 
         var msg_body = begin_cell()
                 .store_uint(op::deposit_ton(), 32)
                 .store_uint(query_id, 64)
                 .store_slice(sender_addr)
-                .store_coins(msg_value - gas_require)
+                .store_coins(msg_value - required_gas)
                 .end_cell();
 
-        messages::send_simple(cashier_addr, msg_body, send_mode:normal(), transaction_gas);
+        messages::send_simple(owner, msg_body, send_mode:normal(), required_gas);
         return ();
     }
 
     if (op == op::withdraw_ton()) {
-        throw_unless(error::invalid_sender_addr(), equal_slices(sender_addr, cashier_addr));
+        throw_unless(error::invalid_sender_addr(), equal_slices(sender_addr, owner));
         throw_unless(error::not_enough_gas_amount(), msg_value >= transaction_gas);
 
         slice to_addr = in_msg_body~load_msg_addr();
         int amount = in_msg_body~load_coins();
 
         messages::send_empty(to_addr, send_mode:normal(), amount);
+        return ();
+    }
+
+    if (op == op::change_addr()) {
+        throw_unless(error::invalid_sender_addr(), equal_slices(sender_addr, owner));
+        slice new_owner_addr = in_msg_body~load_msg_addr();
+        save_data(new_owner_addr);
         return ();
     }
 

@@ -4,6 +4,7 @@ int op::change_settings() asm "0x4abfbc2b PUSHINT";
 int op::check_settings_format() asm "0x35aab65a PUSHINT";
 int op::buy_gov() asm "0xeab9dfd4e PUSHINT";
 int op::confirm() asm "0x8fd3a344 PUSHINT";
+int op::change_addr() asm "0x314ddb8e PUSHINT";
 
 int op::burn_notification() asm "0x7bdd97de PUSHINT";
 int op::mint() asm "21 PUSHINT";
