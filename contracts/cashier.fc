@@ -153,17 +153,12 @@ int change_setting(int value, int step, int min, int max, int sign) inline {
         int amount = in_msg_body~load_coins();
 
         if (equal_slices(sender_addr, bet_minter)) {
-            int burning_op = in_msg_body~load_uint(32);
+            int burning_op = op::burned_bet_for_ton();
 
-            ;; sell BET
-            if (burning_op == op::burned_bet_for_ton()) {
-                int ton_amount = ton_for_bet(amount, fees);
-
-                supplies = combine_supplies(ton_supply - ton_amount, bet_supply - amount, gov_supply);
-                send_coins(vault, to_addr, ton_amount, op::withdraw_ton(), query_id);
-
-                save_data(addresses, supplies, fees);
-                return ();
+            ;; Protection against accidental wasteful burning
+            try {
+                burning_op = in_msg_body~load_uint(32);
+            } catch (_, _) {
             }
 
             ;; buy GOV
@@ -172,6 +167,16 @@ int change_setting(int value, int step, int min, int max, int sign) inline {
 
                 supplies = combine_supplies(ton_supply, bet_supply - amount, gov_supply + gov_amount);
                 send_coins(gov_minter, to_addr, gov_amount, op::mint(), query_id);
+
+                save_data(addresses, supplies, fees);
+                return ();
+
+                ;; sell BET
+            } else {
+                int ton_amount = ton_for_bet(amount, fees);
+
+                supplies = combine_supplies(ton_supply - ton_amount, bet_supply - amount, gov_supply);
+                send_coins(vault, to_addr, ton_amount, op::withdraw_ton(), query_id);
 
                 save_data(addresses, supplies, fees);
                 return ();
