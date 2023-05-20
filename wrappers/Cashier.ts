@@ -53,7 +53,7 @@ export class Cashier implements Contract {
         });
     }
 
-    async sendBuyBet(provider: ContractProvider, via: Sender, value: bigint) {
+    async sendBuyBet(provider: ContractProvider, via: Sender, value: bigint, balance: bigint) {
         await provider.internal(via, {
             value: '0.02',
             sendMode: SendMode.PAY_GAS_SEPARATELY,
@@ -62,6 +62,7 @@ export class Cashier implements Contract {
                 .storeUint(Date.now(), 64)
                 .storeAddress(randomAddress())
                 .storeCoins(value)
+                .storeCoins(balance)
                 .endCell(),
         });
     }

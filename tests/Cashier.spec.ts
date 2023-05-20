@@ -3,7 +3,7 @@ import {Cell, toNano} from 'ton-core';
 import {ChangeSettingsDirection, Cashier, SettingsTarget} from '../wrappers/Cashier';
 import '@ton-community/test-utils';
 import {compile} from '@ton-community/blueprint';
-import {getAddresses, getFees, getSupplies} from "../scripts/deployCashier";
+import {getAddressesForTesting, getFees, getSupplies} from "../scripts/deployCashier";
 import {Opcodes} from "../helpers/opcodes";
 
 
@@ -32,7 +32,7 @@ describe('Cashier', () => {
         govContract = await blockchain.treasury("gov");
 
         cashier = blockchain.openContract(Cashier.createFromConfig({
-            addresses: await getAddresses(),
+            addresses: await getAddressesForTesting(),
             supplies: getSupplies(),
             fees: getFees()
         }, code));
@@ -55,7 +55,9 @@ describe('Cashier', () => {
     });
 
     it('should buy BET', async () => {
-        const buyBetResult = await cashier.sendBuyBet(vault.getSender(), toNano(10));
+        const buyBetResult = await cashier.sendBuyBet(
+            vault.getSender(), toNano(10), toNano(10)
+        );
 
         expect(buyBetResult.transactions).toHaveTransaction({
             from: vault.address,
@@ -76,7 +78,9 @@ describe('Cashier', () => {
     });
 
     it('should not allow to buy BET', async () => {
-        const buyBetResult = await cashier.sendBuyBet(randomSender.getSender(), toNano(10));
+        const buyBetResult = await cashier.sendBuyBet(
+            randomSender.getSender(), toNano(10), toNano(10)
+        );
 
         expect(buyBetResult.transactions).toHaveTransaction({
             from: randomSender.address,
@@ -87,7 +91,9 @@ describe('Cashier', () => {
     });
 
     it('should sell BET', async () => {
-        await cashier.sendBuyBet(vault.getSender(), toNano(10));
+        await cashier.sendBuyBet(
+            vault.getSender(), toNano(10), toNano(10)
+        );
 
         // const supplies = await cashier.getSupplies();
         // console.log(supplies);
@@ -125,7 +131,9 @@ describe('Cashier', () => {
     });
 
     it('should buy GOV', async () => {
-        await cashier.sendBuyBet(vault.getSender(), toNano(10));
+        await cashier.sendBuyBet(
+            vault.getSender(), toNano(10), toNano(10)
+        );
 
         let buyGovResult = await cashier.sendBuyGov(betMinter.getSender(), 5_000n);
 
@@ -180,7 +188,9 @@ describe('Cashier', () => {
     });
 
     it('should sell GOV', async () => {
-        await cashier.sendBuyBet(vault.getSender(), toNano(10));
+        await cashier.sendBuyBet(
+            vault.getSender(), toNano(10), toNano(10)
+        );
         await cashier.sendBuyGov(betMinter.getSender(), 5_000n);
         const sellGovResult = await cashier.sendSellGov(govMinter.getSender(), 3n);
 
