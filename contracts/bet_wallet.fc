@@ -5,8 +5,10 @@
 #include "imports/jetton-utils.fc";
 #include "imports/op-codes.fc";
 #include "imports/messages.fc";
+#include "imports/constants.fc";
 #pragma version >=0.2.0;
 
+int gas_consumption() asm "15000000 PUSHINT"; ;; 0.015 TON
 {-
 
 NOTE that this tokens can be transferred within the same workchain.
@@ -19,8 +21,6 @@ This is suitable for most tokens, if you need tokens transferable between workch
 
 -}
 
-const min_tons_for_storage = 10000000; ;; 0.01 TON
-const gas_consumption = 10000000; ;; 0.01 TON
 
 {-
   Storage
@@ -89,7 +89,7 @@ const gas_consumption = 10000000; ;; 0.01 TON
                     ;; 3 messages: wal1->wal2,  wal2->owner, wal2->response
                     ;; but last one is optional (it is ok if it fails)
                     fwd_count * fwd_fee +
-                    (2 * gas_consumption + min_tons_for_storage));
+                    (2 * gas_consumption() + const::min_tons_for_storage()));
     ;; universal message send fee calculation may be activated here
     ;; by using this instead of fwd_fee
     ;; msg_fwd_fee(to_wallet, msg_body, state_init, 15)
@@ -123,8 +123,8 @@ const gas_consumption = 10000000; ;; 0.01 TON
     int forward_ton_amount = in_msg_body~load_coins();
 
     int ton_balance_before_msg = my_ton_balance - msg_value;
-    int storage_fee = min_tons_for_storage - min(ton_balance_before_msg, min_tons_for_storage);
-    msg_value -= (storage_fee + gas_consumption);
+    int storage_fee = const::min_tons_for_storage() - min(ton_balance_before_msg, const::min_tons_for_storage());
+    msg_value -= (storage_fee + gas_consumption());
     if(forward_ton_amount) {
         msg_value -= (forward_ton_amount + fwd_fee);
         slice either_forward_payload = in_msg_body;
@@ -172,7 +172,7 @@ const gas_consumption = 10000000; ;; 0.01 TON
     throw_unless(705, equal_slices(owner_address, sender_address));
     throw_unless(706, balance >= 0);
     ;; 5 transactions: wallet -> minter -> cashier -> minter -> wallet
-    throw_unless(707, msg_value > 2 * fwd_fee + 5 * gas_consumption);
+    throw_unless(707, msg_value > 2 * fwd_fee + 5 * const::transaction_cost());
 
     var msg_body = begin_cell()
             .store_uint(op::burn_notification(), 32)
@@ -182,7 +182,7 @@ const gas_consumption = 10000000; ;; 0.01 TON
             .store_slice(in_msg_body)
             .end_cell();
 
-    msg_value = my_ton_balance - min_tons_for_storage;
+    msg_value = my_ton_balance - const::max_tons_for_storage();
     messages::send_simple(jetton_master_address, msg_body, send_mode:normal(), msg_value);
     save_data(balance, owner_address, jetton_master_address, jetton_wallet_code);
 }
