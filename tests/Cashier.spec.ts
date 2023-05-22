@@ -305,10 +305,10 @@ describe('Cashier', () => {
             success: true,
         });
 
-        const {value: valueBetBuy, step: stepBetBuy} = await cashier.getFees("bet_buy_fee");
-        const {value: valueBetSell, step: stepBetSell} = await cashier.getFees("bet_sell_fee");
-        const {value: valueGovBuy, step: stepGovBuy} = await cashier.getFees("gov_buy_fee");
-        const {value: valueGovSell, step: stepGovSell} = await cashier.getFees("gov_sell_fee");
+        const {value: valueBetBuy, step: stepBetBuy} = await cashier.getFee("bet_buy_fee");
+        const {value: valueBetSell, step: stepBetSell} = await cashier.getFee("bet_sell_fee");
+        const {value: valueGovBuy, step: stepGovBuy} = await cashier.getFee("gov_buy_fee");
+        const {value: valueGovSell, step: stepGovSell} = await cashier.getFee("gov_sell_fee");
 
         expect([valueBetBuy, stepBetBuy]).toEqual(expected.betBuy);
         expect([valueBetSell, stepBetSell]).toEqual(expected.betSell);

@@ -165,7 +165,7 @@ export class Cashier implements Contract {
         return [vault, betMinter, govMinter, gov];
     }
 
-    async getFees(provider: ContractProvider, key: string) {
+    async getFee(provider: ContractProvider, key: string) {
         const result = await provider.get('get_cashier_data', []);
         result.stack.readCell();
         result.stack.readCell();
