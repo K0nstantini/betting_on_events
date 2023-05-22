@@ -5,7 +5,7 @@ import {Cashier} from "../wrappers/Cashier";
 export async function run(provider: NetworkProvider, args: string[]) {
     const ui = provider.ui();
 
-    const minterAddr = Address.parse(args.length > 0 ? args[0] : await ui.input('Cashier address'));
+    const minterAddr = Address.parse(args.length > 0 ? args[0] : await ui.input('\nCashier address'));
 
     const cashier = provider.open(Cashier.createFromAddress(minterAddr));
 

@@ -69,6 +69,15 @@ export class Vault implements Contract {
         });
     }
 
+    async getData(provider: ContractProvider) {
+        const result = await provider.get('get_vault_data', []);
+        const state = await provider.getState();
+        return {
+            owner: result.stack.readAddress(),
+            balance: state.balance
+        };
+    }
+
     async getOwnerAddress(provider: ContractProvider) {
         const result = await provider.get('get_vault_data', []);
         return result.stack.readAddress();
