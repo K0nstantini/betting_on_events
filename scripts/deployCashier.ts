@@ -19,9 +19,10 @@ export async function run(provider: NetworkProvider) {
 }
 
 export async function getRealAddresses(senderAddr: Address) {
-    const vault = Address.parse("EQArVW-K7SikFIP7VrWfvXME7IOzfL8KrzavEmIltgZ1d1OI");
-    const betMinter = Address.parse("EQCLng8jByT4YsiRLV5S6VfY4N0YUsZrkmrhAKRritJbED_1");
-    const govMinter = Address.parse("EQCMkPh8L6GJzCQHwjYj-4wvfV-bscsdhZqzFTbl2eSVjnTC");
+    const vault = Address.parse("EQCTfe1K3ppVexD2NUEXJeSojRnQ7gU5upKhrNl93Cc0Qugb");
+    const betMinter = Address.parse("EQCoSV86-WXPEqlpNuZScwcvf3IGG-iDu2A1yOICjiXpRhU0");
+    const govMinter = Address.parse("EQB86c_Ah_2sajQx3_po4dnvrcOuLQgF67bPA3xg8m8wAXu3");
+    // cashier: EQA4Pc1deIpefB8keQS_uTrPWa_QOa2lUdJacKKYdpoKGbfU
 
     return beginCell()
         .storeAddress(vault)
