@@ -91,13 +91,7 @@ describe('Cashier', () => {
     });
 
     it('should sell BET', async () => {
-        await cashier.sendBuyBet(
-            vault.getSender(), toNano(10), toNano(10)
-        );
-
-        // const supplies = await cashier.getSupplies();
-        // console.log(supplies);
-
+        await cashier.sendBuyBet(vault.getSender(), toNano(10), toNano(10));
         const sellBetResult = await cashier.sendSellBet(betMinter.getSender(), 8_000n);
 
         expect(sellBetResult.transactions).toHaveTransaction({
@@ -188,9 +182,7 @@ describe('Cashier', () => {
     });
 
     it('should sell GOV', async () => {
-        await cashier.sendBuyBet(
-            vault.getSender(), toNano(10), toNano(10)
-        );
+        await cashier.sendBuyBet(vault.getSender(), toNano(10), toNano(10));
         await cashier.sendBuyGov(betMinter.getSender(), 5_000n);
         const sellGovResult = await cashier.sendSellGov(govMinter.getSender(), 3n);
 

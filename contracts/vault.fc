@@ -50,18 +50,17 @@ slice load_data() inline {
                 .store_coins(my_balance - const::max_tons_for_storage())
                 .end_cell();
 
-        messages::send_simple(owner, msg_body, send_mode:normal(), required_gas);
+        messages::send_simple(owner, msg_body, send_mode::normal(), required_gas);
         return ();
     }
 
     if (op == op::withdraw_ton()) {
         throw_unless(error::invalid_sender_addr(), equal_slices(sender_addr, owner));
-        throw_unless(error::not_enough_gas_amount(), msg_value >= const::transaction_cost());
 
         slice to_addr = in_msg_body~load_msg_addr();
         int amount = in_msg_body~load_coins();
 
-        messages::send_empty(to_addr, send_mode:normal(), amount);
+        messages::send_empty(to_addr, send_mode::paid_externally(), amount);
         return ();
     }
 

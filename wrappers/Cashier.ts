@@ -55,7 +55,7 @@ export class Cashier implements Contract {
 
     async sendBuyBet(provider: ContractProvider, via: Sender, value: bigint, balance: bigint) {
         await provider.internal(via, {
-            value: '0.02',
+            value: '0.03',
             sendMode: SendMode.PAY_GAS_SEPARATELY,
             body: beginCell()
                 .storeUint(Opcodes.depositTon, 32)

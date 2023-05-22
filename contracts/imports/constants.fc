@@ -1,3 +1,3 @@
 int const::min_tons_for_storage() asm "10000000 PUSHINT"; ;; 0.01 TON
 int const::max_tons_for_storage() asm "20000000 PUSHINT"; ;; 0.02 TON
-int const::transaction_cost() asm "20000000 PUSHINT"; ;; 0.01 TON
+int const::transaction_cost() asm "10000000 PUSHINT"; ;; 0.01 TON

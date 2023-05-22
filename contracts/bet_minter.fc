@@ -95,7 +95,7 @@
                 .end_cell();
 
         msg_value = my_balance - const::max_tons_for_storage();
-        messages::send_simple(admin_address, msg_body, send_mode:normal(), msg_value);
+        messages::send_simple(admin_address, msg_body, send_mode::normal(), msg_value);
         save_data(total_supply - jetton_amount, admin_address, content, jetton_wallet_code);
         return ();
     }

@@ -1,13 +1,12 @@
-import {toNano, beginCell, Cell, Dictionary, Address} from 'ton-core';
+import {Address, beginCell, Cell, Dictionary, toNano} from 'ton-core';
 import {Cashier} from '../wrappers/Cashier';
 import {compile, NetworkProvider} from '@ton-community/blueprint';
 import {Blockchain} from "@ton-community/sandbox";
 import {crc32} from "../helpers/crc32";
-import {randomAddress} from "@ton-community/test-utils";
 
 export async function run(provider: NetworkProvider) {
     const cashier = provider.open(Cashier.createFromConfig({
-        addresses: await getRealAddresses(),
+        addresses: await getRealAddresses(provider.sender().address as Address),
         supplies: getSupplies(),
         fees: getFees()
     }, await compile('Cashier')));
@@ -19,17 +18,16 @@ export async function run(provider: NetworkProvider) {
     // run methods on `cashier`
 }
 
-export async function getRealAddresses() {
+export async function getRealAddresses(senderAddr: Address) {
     const vault = Address.parse("EQArVW-K7SikFIP7VrWfvXME7IOzfL8KrzavEmIltgZ1d1OI");
-    const betMinter = Address.parse("EQBiSBqqTgZBgrJzNdGPxQICmgwWYq4DAbfdEug66400NGzr");
-    const govMinter = Address.parse("EQDrrNQ_LOPgRjaIXTUmS2HuF-93HiVAGX3sctvGy9pgxcho");
-    const gov = randomAddress();
+    const betMinter = Address.parse("EQCLng8jByT4YsiRLV5S6VfY4N0YUsZrkmrhAKRritJbED_1");
+    const govMinter = Address.parse("EQCMkPh8L6GJzCQHwjYj-4wvfV-bscsdhZqzFTbl2eSVjnTC");
 
     return beginCell()
         .storeAddress(vault)
         .storeAddress(betMinter)
         .storeAddress(govMinter)
-        .storeRef(beginCell().storeAddress(gov))
+        .storeRef(beginCell().storeAddress(senderAddr))
         .endCell();
 }
 

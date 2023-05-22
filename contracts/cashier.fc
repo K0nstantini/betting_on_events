@@ -80,7 +80,7 @@ int get_fee(int amount, cell dic, int id) impure inline_ref {
             .end_cell();
 
     int msg_value = op::withdraw_ton() ? my_balance - const::max_tons_for_storage() : required_gas;
-    messages::send_simple(destination, msg_body, send_mode:normal(), msg_value);
+    messages::send_simple(destination, msg_body, send_mode::normal(), msg_value);
 }
 
 int bet_for_ton(int amount, cell fees) impure inline {
@@ -264,7 +264,7 @@ int change_setting(int value, int step, int min, int max, int sign) inline {
                 .store_uint(id, 32)
                 .end_cell();
 
-        messages::send_simple(gov_contract, msg_body, send_mode:normal(), const::transaction_cost());
+        messages::send_simple(gov_contract, msg_body, send_mode::normal(), const::transaction_cost());
         return ();
     }
 
