@@ -3,11 +3,13 @@ import {Opcodes} from "../helpers/opcodes";
 
 export type CashierConfig = {
     address: Address,
+    seed: Cell
 };
 
 export function vaultConfigToCell(config: CashierConfig): Cell {
     return beginCell()
         .storeAddress(config.address)
+        .storeRef(config.seed)
         .endCell();
 }
 

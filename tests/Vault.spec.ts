@@ -1,5 +1,5 @@
 import {Blockchain, SandboxContract, TreasuryContract} from '@ton-community/sandbox';
-import {Cell, toNano} from 'ton-core';
+import {beginCell, Cell, toNano} from 'ton-core';
 import '@ton-community/test-utils';
 import {compile} from '@ton-community/blueprint';
 import {Vault} from "../wrappers/Vault";
@@ -26,6 +26,7 @@ describe('Vault', () => {
 
         vault = blockchain.openContract(Vault.createFromConfig({
             address: await getAddress(),
+            seed: beginCell().endCell()
         }, code));
 
         const deployer = await blockchain.treasury('deployer');

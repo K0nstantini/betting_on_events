@@ -1,11 +1,15 @@
-import {Address, toNano} from 'ton-core';
+import {Address, beginCell, toNano} from 'ton-core';
 import {compile, NetworkProvider} from '@ton-community/blueprint';
 import {Blockchain} from "@ton-community/sandbox";
 import {Vault} from "../wrappers/Vault";
 
 export async function run(provider: NetworkProvider) {
+
+    const randomSeed = Math.floor(Math.random() * 10000);
+
     const vault = provider.open(Vault.createFromConfig({
-        address: provider.sender().address as Address
+        address: provider.sender().address as Address,
+        seed: beginCell().storeUint(randomSeed, 256).endCell(),
     }, await compile('Vault')));
 
     await vault.sendDeploy(provider.sender(), toNano('0.05'));

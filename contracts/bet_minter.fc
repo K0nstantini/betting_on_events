@@ -45,7 +45,7 @@
     var msg = begin_cell()
             .store_uint(0x18, 6)
             .store_slice(to_wallet_address)
-            .store_coins(const::transaction_cost()* 2)
+            .store_coins(const::transaction_cost())
             .store_uint(4 + 2 + 1, 1 + 4 + 4 + 64 + 32 + 1 + 1 + 1)
             .store_ref(state_init)
             .store_ref(master_msg);
