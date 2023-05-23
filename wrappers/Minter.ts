@@ -42,30 +42,16 @@ export class JettonMinter implements Contract {
                    opts: {
                        toAddress: Address;
                        jettonAmount: bigint;
-                       amount: bigint;
-                       queryId: number;
-                       value: bigint;
                    }
     ) {
         await provider.internal(via, {
-            value: opts.value,
+            value: '0.03',
             sendMode: SendMode.PAY_GAS_SEPARATELY,
             body: beginCell()
                 .storeUint(21, 32)
-                .storeUint(opts.queryId, 64)
+                .storeUint(Date.now(), 64)
                 .storeAddress(opts.toAddress)
-                .storeCoins(opts.amount)
-                .storeRef(
-                    beginCell()
-                        .storeUint(0x178d4519, 32)
-                        .storeUint(opts.queryId, 64)
-                        .storeCoins(opts.jettonAmount)
-                        .storeAddress(this.address)
-                        .storeAddress(this.address)
-                        .storeCoins(0)
-                        .storeUint(0, 1)
-                        .endCell()
-                )
+                .storeCoins(opts.jettonAmount)
                 .endCell(),
         });
     }

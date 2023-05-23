@@ -31,11 +31,13 @@
     );
 }
 
-() mint_tokens(slice to_address, cell jetton_wallet_code, int jetton_amount) impure {
+() mint_tokens(slice to_address, cell jetton_wallet_code, int jetton_amount, query_id) impure {
     cell state_init = calculate_jetton_wallet_state_init(to_address, my_address(), jetton_wallet_code);
     slice to_wallet_address = calculate_jetton_wallet_address(state_init);
 
     var master_msg = begin_cell()
+            .store_uint(op::internal_transfer(), 32)
+            .store_uint(query_id, 64)
             .store_coins(jetton_amount)
             .store_slice(my_address())
             .end_cell();
@@ -43,7 +45,7 @@
     var msg = begin_cell()
             .store_uint(0x18, 6)
             .store_slice(to_wallet_address)
-            .store_coins(const::transaction_cost())
+            .store_coins(const::transaction_cost()* 2)
             .store_uint(4 + 2 + 1, 1 + 4 + 4 + 64 + 32 + 1 + 1 + 1)
             .store_ref(state_init)
             .store_ref(master_msg);
@@ -76,7 +78,7 @@
         throw_unless(73, equal_slices(sender_address, admin_address));
         slice to_address = in_msg_body~load_msg_addr();
         int jetton_amount = in_msg_body~load_coins();
-        mint_tokens(to_address, jetton_wallet_code, jetton_amount);
+        mint_tokens(to_address, jetton_wallet_code, jetton_amount, query_id);
         save_data(total_supply + jetton_amount, admin_address, content, jetton_wallet_code);
         return ();
     }
