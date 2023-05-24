@@ -79,7 +79,7 @@ int get_fee(int amount, cell dic, int id) impure inline_ref {
             .store_coins(token_amount)
             .end_cell();
 
-    int msg_value = op::withdraw_ton() ? my_balance - const::max_tons_for_storage() : required_gas;
+    int msg_value = op == op::withdraw_ton() ? my_balance - const::max_tons_for_storage() : required_gas;
     messages::send_simple(destination, msg_body, send_mode::normal(), msg_value);
 }
 
