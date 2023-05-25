@@ -93,8 +93,8 @@
         var msg_body = begin_cell()
                 .store_uint(op::burn_notification(), 32)
                 .store_uint(query_id, 64)
-                .store_coins(jetton_amount)
                 .store_slice(from_address)
+                .store_coins(jetton_amount)
                 .store_slice(in_msg_body)
                 .end_cell();
 

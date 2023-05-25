@@ -69,7 +69,7 @@ int get_fee(int amount, cell dic, int id) impure inline_ref {
 
 () send_coins(slice destination, slice user_addr, int token_amount, int op, int my_balance, int msg_value, int query_id) impure inline_ref {
     throw_unless(error::invalid_amount(), token_amount > 0);
-    int required_gas = const::transaction_cost() * 2;
+    int required_gas = const::transaction_cost() * 3;
     throw_unless(error::not_enough_gas_amount(), msg_value >= required_gas);
 
     var msg_body = begin_cell()

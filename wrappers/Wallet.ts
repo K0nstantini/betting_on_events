@@ -1,4 +1,5 @@
 import {Address, beginCell, Cell, Contract, contractAddress, ContractProvider, Sender, SendMode} from 'ton-core';
+import {Opcodes} from "../helpers/opcodes";
 
 export type JettonWalletConfig = {
     ownerAddress: Address;
@@ -62,22 +63,15 @@ export class JettonWallet implements Contract {
         });
     }
 
-    async sendBurn(provider: ContractProvider, via: Sender,
-                   opts: {
-                       value: bigint;
-                       queryId: number
-                       jettonAmount: bigint;
-                   }
-    ) {
+    async sendBurn(provider: ContractProvider, via: Sender, jettonAmount: bigint) {
         await provider.internal(via, {
-            value: opts.value,
+            value: '0.12',
             sendMode: SendMode.PAY_GAS_SEPARATELY,
             body: beginCell()
-                .storeUint(0x595f07bc, 32)
-                .storeUint(opts.queryId, 64)
-                .storeCoins(opts.jettonAmount)
-                .storeAddress(via.address)
-                .storeUint(0, 1)
+                .storeUint(Opcodes.burn, 32)
+                .storeUint(Date.now(), 64)
+                .storeCoins(jettonAmount)
+                .storeUint(Opcodes.burnedBetForTon, 32)
                 .endCell(),
         });
     }
