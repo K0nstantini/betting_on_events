@@ -84,8 +84,8 @@
     }
 
     if (op == op::burn_notification()) {
-        int jetton_amount = in_msg_body~load_coins();
         slice from_address = in_msg_body~load_msg_addr();
+        int jetton_amount = in_msg_body~load_coins();
         throw_unless(74,
                 equal_slices(calculate_user_jetton_wallet_address(from_address, my_address(), jetton_wallet_code), sender_address)
         );

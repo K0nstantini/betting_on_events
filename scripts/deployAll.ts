@@ -9,6 +9,7 @@ import {getFees, getSupplies} from "./deployCashier";
 export async function run(provider: NetworkProvider) {
 
     const sender = provider.sender();
+    const sleep = () => new Promise(r => setTimeout(r, 30_000));
     const attempts = 20;
 
     const vault = await deployVault(provider, attempts);
@@ -22,9 +23,12 @@ export async function run(provider: NetworkProvider) {
             govMinterAddr: govMinter.address
         });
     const cashier = await deployCashier(provider, attempts, cashierAddress);
+    // await sleep();
 
     await vault.sendChangeOwner(sender, cashier.address);
+    await sleep();
     await betMinter.sendChangeOwner(sender, cashier.address);
+    await sleep();
     await govMinter.sendChangeOwner(sender, cashier.address);
 }
 

@@ -61,7 +61,7 @@ export class Vault implements Contract {
 
     async sendChangeOwner(provider: ContractProvider, via: Sender, newOwner: Address) {
         await provider.internal(via, {
-            value: '0.02',
+            value: '0.01',
             sendMode: SendMode.PAY_GAS_SEPARATELY,
             body: beginCell()
                 .storeUint(Opcodes.changeAddr, 32)
