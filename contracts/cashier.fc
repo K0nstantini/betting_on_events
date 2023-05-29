@@ -9,6 +9,14 @@
 const fee_accuracy = 10000; ;; 0.01
 const bet_accuracy = 1000000;
 const gov_start_price = 1000;
+const min_bet_for_change = 100;
+
+const buy_bet_gas = 45000000; ;; 0.045 TON cashier ->(0.015) bet minter ->(0.03) bet wallet
+const sell_bet_gas = 25000000; ;; 0.025 TON cashier ->(0.015) vault ->(0.01) user wallet
+const buy_gov_gas = 40000000; ;; 0.06 TON cashier ->(0.01) gov minter ->(0.03) gov wallet
+const buy_gov_gas_change = 20000000; ;; 0.02 TON cashier ->(0.01)  bet minter ->(0.01) bet wallet
+const sell_gov_gas = 25000000; ;; 0.025 TON cashier ->(0.015) bet minter ->(0.01) bet wallet
+const check_settings_gas = 10000000; ;; 0.01 TON
 
 const bet_buy_fee = "bet_buy_fee"c;
 const bet_sell_fee = "bet_sell_fee"c;
@@ -67,10 +75,8 @@ int get_fee(int amount, cell dic, int id) impure inline_ref {
     return muldiv(amount, factor, fee_accuracy);
 }
 
-() send_coins(slice destination, slice user_addr, int token_amount, int op, int my_balance, int msg_value, int query_id) impure inline_ref {
+() send_coins(slice destination, slice user_addr, int token_amount, int op, int msg_value, int query_id) impure inline_ref {
     throw_unless(error::invalid_amount(), token_amount > 0);
-    int required_gas = const::transaction_cost() * 3;
-    throw_unless(error::not_enough_gas_amount(), msg_value >= required_gas);
 
     var msg_body = begin_cell()
             .store_uint(op, 32)
@@ -79,7 +85,6 @@ int get_fee(int amount, cell dic, int id) impure inline_ref {
             .store_coins(token_amount)
             .end_cell();
 
-    int msg_value = op == op::withdraw_ton() ? my_balance - const::max_tons_for_storage() : required_gas;
     messages::send_simple(destination, msg_body, send_mode::normal(), msg_value);
 }
 
@@ -145,14 +150,15 @@ int change_setting(int value, int step, int min, int max, int sign) inline {
     ;; buy BET
     if (op == op::deposit_ton()) {
         throw_unless(error::invalid_sender_addr(), equal_slices(sender_addr, vault));
+        throw_unless(error::not_enough_gas_amount(), msg_value >= buy_bet_gas);
 
         slice to_addr = in_msg_body~load_msg_addr();
         int ton_amount = in_msg_body~load_coins();
         int update_ton_supply = in_msg_body~load_coins();
-        int change = bet_for_ton(ton_amount, fees);
+        int bet_amount = bet_for_ton(ton_amount, fees);
 
-        supplies = combine_supplies(update_ton_supply, bet_supply + change, gov_supply);
-        send_coins(bet_minter, to_addr, change, op::mint(), my_balance, msg_value, query_id);
+        supplies = combine_supplies(update_ton_supply, bet_supply + bet_amount, gov_supply);
+        send_coins(bet_minter, to_addr, bet_amount, op::mint(), buy_bet_gas, query_id);
 
         save_data(addresses, supplies, fees);
         return ();
@@ -173,14 +179,16 @@ int change_setting(int value, int step, int min, int max, int sign) inline {
 
             ;; buy GOV
             if (burning_op == op::burned_bet_for_gov()) {
-                int (gov_amount, change) = gov_for_bet(amount, gov_supply, bet_supply, ton_supply, fees);
-                change = change > some_value ? change : 0;
+                throw_unless(error::not_enough_gas_amount(), msg_value >= buy_gov_gas + buy_gov_gas_change);
+
+                (int gov_amount, int change) = gov_for_bet(amount, gov_supply, bet_supply, ton_supply, fees);
+                change = change >= min_bet_for_change ? change : 0;
 
                 if (gov_amount > 0) {
-                    send_coins(gov_minter, to_addr, gov_amount, op::mint(), my_balance, msg_value, query_id);
+                    send_coins(gov_minter, to_addr, gov_amount, op::mint(), buy_gov_gas, query_id);
                 }
                 if (change > 0) {
-                    send_coins(bet_minter, to_addr, change, op::mint(), my_balance, msg_value, query_id);
+                    send_coins(bet_minter, to_addr, change, op::mint(), buy_gov_gas_change, query_id);
                 }
 
                 if ((gov_amount > 0) | (change > 0)) {
@@ -191,10 +199,13 @@ int change_setting(int value, int step, int min, int max, int sign) inline {
 
                 ;; sell BET
             } else {
+                throw_unless(error::not_enough_gas_amount(), msg_value >= sell_bet_gas);
+
                 int ton_amount = ton_for_bet(amount, fees);
 
                 supplies = combine_supplies(ton_supply - ton_amount, bet_supply - amount, gov_supply);
-                send_coins(vault, to_addr, ton_amount, op::withdraw_ton(), my_balance, msg_value, query_id);
+                msg_value =  my_balance - const::max_tons_for_storage();
+                send_coins(vault, to_addr, ton_amount, op::withdraw_ton(), msg_value, query_id);
 
                 save_data(addresses, supplies, fees);
                 return ();
@@ -203,10 +214,12 @@ int change_setting(int value, int step, int min, int max, int sign) inline {
 
         ;; sell GOV
         if (equal_slices(sender_addr, gov_minter)) {
+            throw_unless(error::not_enough_gas_amount(), msg_value >= sell_gov_gas);
+
             int bet_amount = bet_for_gov(amount, gov_supply, bet_supply, ton_supply, fees);
 
-            supplies = combine_supplies(ton_supply, bet_supply + change, gov_supply - amount);
-            send_coins(bet_minter, to_addr, change, op::mint(), my_balance, msg_value, query_id);
+            supplies = combine_supplies(ton_supply, bet_supply + bet_amount, gov_supply - amount);
+            send_coins(bet_minter, to_addr, bet_amount, op::mint(), sell_gov_gas, query_id);
 
             save_data(addresses, supplies, fees);
             return ();
@@ -260,7 +273,7 @@ int change_setting(int value, int step, int min, int max, int sign) inline {
 
     if (op == op::check_settings_format()) {
         throw_unless(error::invalid_sender_addr(), equal_slices(sender_addr, gov_contract));
-        throw_unless(error::not_enough_gas_amount(), msg_value >= const::transaction_cost());
+        throw_unless(error::not_enough_gas_amount(), msg_value >= check_settings_gas);
 
         int id = in_msg_body~load_uint(32);
         slice ds = in_msg_body~load_ref().begin_parse();
@@ -276,7 +289,7 @@ int change_setting(int value, int step, int min, int max, int sign) inline {
                 .store_uint(id, 32)
                 .end_cell();
 
-        messages::send_simple(gov_contract, msg_body, send_mode::normal(), const::transaction_cost());
+        messages::send_simple(gov_contract, msg_body, send_mode::normal(), check_settings_gas);
         return ();
     }
 
