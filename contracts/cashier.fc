@@ -94,12 +94,16 @@ int ton_for_bet(int amount, cell fees) inline {
     return amount - fee;
 }
 
-int gov_for_bet(int amount, int gov_supply, int bet_supply, int ton_supply, cell fees) inline {
+(int, int) gov_for_bet(int amount, int gov_supply, int bet_supply, int ton_supply, cell fees) inline {
     int fee = get_fee(amount, fees, gov_buy_fee);
+    amount -= fee;
     if (gov_supply > 0) {
-        return muldiv(amount - fee, gov_supply, ton_supply / bet_accuracy - bet_supply);
+        int diff = ton_supply / bet_accuracy - bet_supply;
+        int govs = muldiv(amount, gov_supply, diff);
+        int change = muldiv(govs, diff, gov_supply);
+        return (govs, change);
     } else {
-        return (amount - fee) / gov_start_price;
+        return (amount / gov_start_price, amount % gov_start_price);
     }
 }
 
@@ -145,10 +149,10 @@ int change_setting(int value, int step, int min, int max, int sign) inline {
         slice to_addr = in_msg_body~load_msg_addr();
         int ton_amount = in_msg_body~load_coins();
         int update_ton_supply = in_msg_body~load_coins();
-        int bet_amount = bet_for_ton(ton_amount, fees);
+        int change = bet_for_ton(ton_amount, fees);
 
-        supplies = combine_supplies(update_ton_supply, bet_supply + bet_amount, gov_supply);
-        send_coins(bet_minter, to_addr, bet_amount, op::mint(), my_balance, msg_value, query_id);
+        supplies = combine_supplies(update_ton_supply, bet_supply + change, gov_supply);
+        send_coins(bet_minter, to_addr, change, op::mint(), my_balance, msg_value, query_id);
 
         save_data(addresses, supplies, fees);
         return ();
@@ -169,12 +173,20 @@ int change_setting(int value, int step, int min, int max, int sign) inline {
 
             ;; buy GOV
             if (burning_op == op::burned_bet_for_gov()) {
-                int gov_amount = gov_for_bet(amount, gov_supply, bet_supply, ton_supply, fees);
+                int (gov_amount, change) = gov_for_bet(amount, gov_supply, bet_supply, ton_supply, fees);
+                change = change > some_value ? change : 0;
 
-                supplies = combine_supplies(ton_supply, bet_supply - amount, gov_supply + gov_amount);
-                send_coins(gov_minter, to_addr, gov_amount, op::mint(), my_balance, msg_value, query_id);
+                if (gov_amount > 0) {
+                    send_coins(gov_minter, to_addr, gov_amount, op::mint(), my_balance, msg_value, query_id);
+                }
+                if (change > 0) {
+                    send_coins(bet_minter, to_addr, change, op::mint(), my_balance, msg_value, query_id);
+                }
 
-                save_data(addresses, supplies, fees);
+                if ((gov_amount > 0) | (change > 0)) {
+                    supplies = combine_supplies(ton_supply, bet_supply - amount + change, gov_supply + gov_amount);
+                    save_data(addresses, supplies, fees);
+                }
                 return ();
 
                 ;; sell BET
@@ -193,8 +205,8 @@ int change_setting(int value, int step, int min, int max, int sign) inline {
         if (equal_slices(sender_addr, gov_minter)) {
             int bet_amount = bet_for_gov(amount, gov_supply, bet_supply, ton_supply, fees);
 
-            supplies = combine_supplies(ton_supply, bet_supply + bet_amount, gov_supply - amount);
-            send_coins(bet_minter, to_addr, bet_amount, op::mint(), my_balance, msg_value, query_id);
+            supplies = combine_supplies(ton_supply, bet_supply + change, gov_supply - amount);
+            send_coins(bet_minter, to_addr, change, op::mint(), my_balance, msg_value, query_id);
 
             save_data(addresses, supplies, fees);
             return ();

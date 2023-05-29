@@ -130,6 +130,7 @@ This is suitable for most tokens, if you need tokens transferable between workch
     int query_id = in_msg_body~load_uint(64);
     int jetton_amount = in_msg_body~load_coins();
 
+    throw_unless(704, jetton_amount > 0);
     balance -= jetton_amount;
     throw_unless(705, equal_slices(owner_address, sender_address));
     throw_unless(706, balance >= 0);

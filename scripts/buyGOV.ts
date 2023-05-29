@@ -9,5 +9,5 @@ export async function run(provider: NetworkProvider, args: string[]) {
     const amount = BigInt(args.length > 0 ? args[0] : await ui.input('BET amount'));
 
     const wallet = provider.open(JettonWallet.createFromAddress(walletAddr));
-    await wallet.sendBurnForTon(provider.sender(), amount);
+    await wallet.sendBurnForGov(provider.sender(), amount);
 }

@@ -63,7 +63,7 @@ export class JettonWallet implements Contract {
         });
     }
 
-    async sendBurn(provider: ContractProvider, via: Sender, jettonAmount: bigint) {
+    async sendBurnForTon(provider: ContractProvider, via: Sender, jettonAmount: bigint) {
         await provider.internal(via, {
             value: '0.12',
             sendMode: SendMode.PAY_GAS_SEPARATELY,
@@ -72,6 +72,19 @@ export class JettonWallet implements Contract {
                 .storeUint(Date.now(), 64)
                 .storeCoins(jettonAmount)
                 .storeUint(Opcodes.burnedBetForTon, 32)
+                .endCell(),
+        });
+    }
+
+    async sendBurnForGov(provider: ContractProvider, via: Sender, jettonAmount: bigint) {
+        await provider.internal(via, {
+            value: '0.12',
+            sendMode: SendMode.PAY_GAS_SEPARATELY,
+            body: beginCell()
+                .storeUint(Opcodes.burn, 32)
+                .storeUint(Date.now(), 64)
+                .storeCoins(jettonAmount)
+                .storeUint(Opcodes.burnedBetForGov, 32)
                 .endCell(),
         });
     }
