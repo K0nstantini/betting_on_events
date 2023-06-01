@@ -2,9 +2,9 @@ int send_mode::normal() asm "0 PUSHINT";
 int send_mode::paid_externally() asm "1 PUSHINT";
 int send_mode::carry_remaining_gas() asm "64 PUSHINT";
 
-() messages::send(int start_flags, slice to, cell body, int mode, int amount) impure inline {
+() messages::send_simple(slice to, cell body, int mode, int amount) impure inline {
     var msg = begin_cell()
-            .store_uint(start_flags, 6)
+            .store_uint(0x18, 6)
             .store_slice(to)
             .store_coins(amount)
             .store_uint(1, 107)
@@ -13,14 +13,12 @@ int send_mode::carry_remaining_gas() asm "64 PUSHINT";
     send_raw_message(msg, mode);
 }
 
-() messages::send_simple(slice to, cell body, int mode, int amount) impure inline {
-    messages::send(0x18, to, body, mode, amount);
-}
-
 () messages::send_empty(slice to, int mode, int amount) impure inline {
-    messages::send(0x18, to, begin_cell().end_cell(), mode, amount);
-}
-
-() messages::send_nobounce(slice to, cell body, int mode, int amount) impure inline {
-    messages::send(0x10, to, body, mode, amount);
+    var msg = begin_cell()
+            .store_uint(0x18, 6)
+            .store_slice(to)
+            .store_coins(amount)
+            .store_uint(0, 107)
+            .end_cell();
+    send_raw_message(msg, mode);
 }

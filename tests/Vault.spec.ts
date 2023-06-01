@@ -48,7 +48,7 @@ describe('Vault', () => {
 
     it('should Deposit', async () => {
         const depositResult = await vault.sendDeposit(
-            randomSender.getSender(), toNano(10)
+            randomSender.getSender(), toNano('0.45'), toNano('0.5')
         );
 
         expect(depositResult.transactions).toHaveTransaction({
@@ -60,14 +60,38 @@ describe('Vault', () => {
         expect(depositResult.transactions).toHaveTransaction({
             from: vault.address,
             to: cashier.address,
+            value: toNano('0.035'),
             success: true,
         });
 
     });
 
+    it('should return Deposit', async () => {
+        console.log(`Vault: ${vault.address}`);
+        console.log(`Cashier: ${cashier.address}`);
+        console.log(`User wallet: ${randomSender.address}`);
+
+        const depositReturnResult = await vault.sendBounceDeposit(
+            cashier.getSender(), randomSender.address, toNano('0.1')
+        );
+
+        expect(depositReturnResult.transactions).toHaveTransaction({
+            from: cashier.address,
+            to: vault.address,
+            inMessageBounced: true,
+            success: false,
+        });
+
+        expect(depositReturnResult.transactions).toHaveTransaction({
+            from: vault.address,
+            to: randomSender.address,
+            success: true,
+        });
+    });
+
     it('should not allow to Deposit', async () => {
         const depositResult = await vault.sendDeposit(
-            randomSender.getSender(), 20000000n
+            randomSender.getSender(), 20000000n, 20000000n // fix
         );
 
         expect(depositResult.transactions).toHaveTransaction({
@@ -78,7 +102,7 @@ describe('Vault', () => {
     });
 
     it('should Withdraw', async () => {
-        await vault.sendDeposit(randomSender.getSender(), toNano(10));
+        await vault.sendDeposit(randomSender.getSender(), toNano(10), toNano('10.05'));
 
         const withdrawResult = await vault.sendWithdraw(
             cashier.getSender(), randomSender.address, toNano(5)

@@ -26,10 +26,10 @@ slice load_data() inline {
     in_msg_body~skip_bits(32);
     int op = in_msg_body~load_uint(32);
     throw_unless(error::invalid_op_code(), op == op::deposit_ton());
-    in_msg_body~skip_bits(64); ;; query_id
+    int query_id = in_msg_body~load_uint(64);
     slice to_addr = in_msg_body~load_msg_addr();
     int ton_amount = in_msg_body~load_coins();
-    messages::send_simple(to_addr, begin_cell().end_cell(), send_mode::paid_externally(), ton_amount);
+    messages::send_empty(to_addr, send_mode::paid_externally(), ton_amount);
 }
 
 () recv_internal(int my_balance, int msg_value, cell in_msg_full, slice in_msg_body) impure {
