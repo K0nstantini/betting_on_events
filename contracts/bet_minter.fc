@@ -12,12 +12,16 @@
 #include "imports/errors.fc";
 #pragma version >=0.2.0;
 
-const mint_for_unknown_wallet_gas = 30000000; ;; 0.03 TON
-const mint_for_existed_wallet_gas = 10000000; ;; 0.01 TON
-const burn_notification_gas = 20000000; ;; 0.02 TON
-const provide_wallet_addr_gas = 10000000; ;; 0.01 TON
-const transfer_gas = 10000000; ;; 0.01 TON
+const general_consumed_gas = 10000000; ;; 0.01
+const mint_consumed_gas = 20000000; ;; 0.02
+const mint_send_value = 10000000; ;; 0.01 TON
+const burn_notification_consumed_gas = 10000000; ;; 0.01
+const burn_notification_value = 10000000; ;; 0.01 TON
 const gas_for_bounce = 10000000; ;; 0.01 TON
+
+;; const burn_notification_gas = 20000000; ;; 0.02 TON
+;; const provide_wallet_addr_gas = 10000000; ;; 0.01 TON
+;; const transfer_gas = 10000000; ;; 0.01 TON
 
 (int, slice, cell, cell) load_data() inline {
     slice ds = get_data().begin_parse();
@@ -39,37 +43,47 @@ const gas_for_bounce = 10000000; ;; 0.01 TON
     );
 }
 
-() mint_tokens(slice to_address, cell jetton_wallet_code, int jetton_amount, int msg_value, query_id) impure {
+(slice, cell, cell) mint_data(slice to_address, cell jetton_wallet_code, int jetton_amount, query_id) inline {
     cell state_init = calculate_jetton_wallet_state_init(to_address, my_address(), jetton_wallet_code);
     slice to_wallet_address = calculate_jetton_wallet_address(state_init);
 
-    var master_msg = begin_cell()
+    cell msg_body = begin_cell()
             .store_uint(op::internal_transfer(), 32)
             .store_uint(query_id, 64)
             .store_coins(jetton_amount)
             .store_slice(my_address())
             .end_cell();
 
+    return (to_wallet_address, msg_body, state_init);
+}
+
+() mint_tokens(slice to_address, cell jetton_wallet_code, int jetton_amount, query_id) impure inline {
+    (slice to_wallet_address, cell msg_body, cell state_init) = mint_data(to_address, jetton_wallet_code, jetton_amount, query_id);
+
     var msg = begin_cell()
             .store_uint(0x18, 6)
             .store_slice(to_wallet_address)
-            .store_coins(msg_value)
+            .store_coins(mint_send_value)
             .store_uint(4 + 2 + 1, 1 + 4 + 4 + 64 + 32 + 1 + 1 + 1)
             .store_ref(state_init)
-            .store_ref(master_msg);
+            .store_ref(msg_body);
     send_raw_message(msg.end_cell(), 1); ;; pay transfer fees separately, revert on errors
 }
 
+() return_tokens(slice to_address, cell jetton_wallet_code, int jetton_amount, query_id) impure inline {
+    (slice to_wallet_address, cell msg_body, _) = mint_data(to_address, jetton_wallet_code, jetton_amount, query_id);
+    messages::send_simple(to_wallet_address, msg_body, send_mode::paid_externally(), 0);
+}
 
 () on_bounce (slice in_msg_body) impure {
-    in_msg_body~skip_bits(32); ;; 0xFFFFFFFF
+    in_msg_body~skip_bits(32);
     (int total_supply, slice admin_address, cell content, cell jetton_wallet_code) = load_data();
     int op = in_msg_body~load_uint(32);
     throw_unless(error::invalid_op_code(), op == op::burn_notification());
     int query_id = in_msg_body~load_uint(64);
     slice to_address = in_msg_body~load_msg_addr();
     int jetton_amount = in_msg_body~load_coins();
-    mint_tokens(to_address, jetton_wallet_code, jetton_amount, mint_for_existed_wallet_gas, query_id);
+    return_tokens(to_address, jetton_wallet_code, jetton_amount, query_id);
     save_data(total_supply + jetton_amount, admin_address, content, jetton_wallet_code);
 }
 
@@ -99,17 +113,18 @@ const gas_for_bounce = 10000000; ;; 0.01 TON
 
     if (op == op::mint()) {
         throw_unless(73, equal_slices(sender_address, admin_address));
-        throw_unless(error::not_enough_gas_amount(), msg_value >= mint_for_unknown_wallet_gas);
+        throw_unless(error::not_enough_gas_amount(), msg_value >= mint_consumed_gas + mint_send_value);
 
         slice to_address = in_msg_body~load_msg_addr();
         int jetton_amount = in_msg_body~load_coins();
-        mint_tokens(to_address, jetton_wallet_code, jetton_amount, mint_for_unknown_wallet_gas, query_id);
+        mint_tokens(to_address, jetton_wallet_code, jetton_amount, query_id);
         save_data(total_supply + jetton_amount, admin_address, content, jetton_wallet_code);
         return ();
     }
 
     if (op == op::burn_notification()) {
-        throw_unless(error::not_enough_gas_amount(), msg_value >= burn_notification_gas);
+        int requred_gas = burn_notification_consumed_gas + burn_notification_value + gas_for_bounce;
+        throw_unless(error::not_enough_gas_amount(), msg_value >= requred_gas);
 
         slice from_address = in_msg_body~load_msg_addr();
         int jetton_amount = in_msg_body~load_coins();
@@ -126,13 +141,13 @@ const gas_for_bounce = 10000000; ;; 0.01 TON
                 .end_cell();
 
         msg_value = my_balance - const::max_tons_for_storage();
-        messages::send_simple(admin_address, msg_body, send_mode::normal(), msg_value - gas_for_bounce);
+        messages::send_simple(admin_address, msg_body, send_mode::paid_externally(), msg_value - gas_for_bounce);
         save_data(total_supply - jetton_amount, admin_address, content, jetton_wallet_code);
         return ();
     }
 
     if (op == op::provide_wallet_address()) {
-        throw_unless(75, msg_value > fwd_fee + provide_wallet_addr_gas);
+        throw_unless(75, msg_value > fwd_fee + general_consumed_gas);
 
         slice owner_address = in_msg_body~load_msg_addr();
         int include_address? = in_msg_body~load_uint(1);

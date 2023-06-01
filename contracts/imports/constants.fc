@@ -1,2 +1,2 @@
 int const::min_tons_for_storage() asm "10000000 PUSHINT"; ;; 0.02 TON
-int const::max_tons_for_storage() asm "30000000 PUSHINT"; ;; 0.05 TON
+int const::max_tons_for_storage() asm "50000000 PUSHINT"; ;; 0.05 TON

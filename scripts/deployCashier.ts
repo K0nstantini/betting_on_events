@@ -59,9 +59,9 @@ export function getSupplies() {
 
 export function getFees() {
     const dict = Dictionary.empty(Dictionary.Keys.Uint(32), Dictionary.Values.Cell())
-    dict.set(crc32("bet_buy_fee"), getFee(1000));
-    dict.set(crc32("bet_sell_fee"), getFee(500));
-    dict.set(crc32("gov_buy_fee"), getFee(200));
+    dict.set(crc32("bet_buy_fee"), getFee(100));
+    dict.set(crc32("bet_sell_fee"), getFee(100));
+    dict.set(crc32("gov_buy_fee"), getFee(100));
     dict.set(crc32("gov_sell_fee"), getFee(100));
     return dict;
 }
