@@ -7,8 +7,7 @@ export async function run(provider: NetworkProvider, args: string[]) {
 
     const vaultAddr = Address.parse(args.length > 0 ? args[0] : await ui.input('Vault address'));
     const amount = toNano(args.length > 0 ? args[0] : await ui.input('Ton amount'));
-    const gas = toNano('0.02');
 
     const vault = provider.open(Vault.createFromAddress(vaultAddr));
-    await vault.sendDeposit(provider.sender(), amount, amount + gas);
+    await vault.sendDeposit(provider.sender(), amount);
 }

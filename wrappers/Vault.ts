@@ -35,14 +35,13 @@ export class Vault implements Contract {
         });
     }
 
-    async sendDeposit(provider: ContractProvider, via: Sender, amount: bigint, value: bigint) {
+    async sendDeposit(provider: ContractProvider, via: Sender,  value: bigint) {
         await provider.internal(via, {
             value,
             sendMode: SendMode.PAY_GAS_SEPARATELY,
             body: beginCell()
                 .storeUint(Opcodes.depositTon, 32)
                 .storeUint(Date.now(), 64)
-                .storeCoins(amount)
                 .endCell(),
         });
     }

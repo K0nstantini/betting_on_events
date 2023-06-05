@@ -23,7 +23,6 @@ export async function run(provider: NetworkProvider) {
             govMinterAddr: govMinter.address
         });
     const cashier = await deployCashier(provider, attempts, cashierAddress);
-    // await sleep();
 
     await vault.sendChangeOwner(sender, cashier.address);
     await sleep();
@@ -32,7 +31,7 @@ export async function run(provider: NetworkProvider) {
     await govMinter.sendChangeOwner(sender, cashier.address);
 }
 
-async function deployVault(provider: NetworkProvider, attempts: number) {
+export async function deployVault(provider: NetworkProvider, attempts: number) {
     const vault = provider.open(Vault.createFromConfig({
         address: provider.sender().address as Address,
         seed: beginCell().storeUint(randomSeed(), 256).endCell(),
@@ -43,7 +42,7 @@ async function deployVault(provider: NetworkProvider, attempts: number) {
     return vault;
 }
 
-async function deployMinter(provider: NetworkProvider, attempts: number) {
+export async function deployMinter(provider: NetworkProvider, attempts: number) {
     const minter = provider.open(JettonMinter.createFromConfig({
         adminAddress: provider.sender().address as Address,
         content: beginCell().storeUint(randomSeed(), 256).endCell(),
@@ -55,7 +54,7 @@ async function deployMinter(provider: NetworkProvider, attempts: number) {
     return minter;
 }
 
-async function deployCashier(provider: NetworkProvider, attempts: number, addresses: Cell) {
+export async function deployCashier(provider: NetworkProvider, attempts: number, addresses: Cell) {
     const cashier = provider.open(Cashier.createFromConfig({
         addresses,
         supplies: getSupplies(),
@@ -67,7 +66,7 @@ async function deployCashier(provider: NetworkProvider, attempts: number, addres
     return cashier;
 }
 
-function getCashierAddresses(senderAddr: Address,
+export function getCashierAddresses(senderAddr: Address,
                              addresses: {
                                  vaultAddr: Address;
                                  betMinterAddr: Address;

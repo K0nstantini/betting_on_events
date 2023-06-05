@@ -48,7 +48,7 @@ describe('Vault', () => {
 
     it('should Deposit', async () => {
         const depositResult = await vault.sendDeposit(
-            randomSender.getSender(), toNano('0.45'), toNano('0.5')
+            randomSender.getSender(), toNano('0.45')
         );
 
         expect(depositResult.transactions).toHaveTransaction({
@@ -91,7 +91,7 @@ describe('Vault', () => {
 
     it('should not allow to Deposit', async () => {
         const depositResult = await vault.sendDeposit(
-            randomSender.getSender(), 20000000n, 20000000n // fix
+            randomSender.getSender(), 20000000n
         );
 
         expect(depositResult.transactions).toHaveTransaction({
@@ -102,7 +102,7 @@ describe('Vault', () => {
     });
 
     it('should Withdraw', async () => {
-        await vault.sendDeposit(randomSender.getSender(), toNano(10), toNano('10.05'));
+        await vault.sendDeposit(randomSender.getSender(), toNano(10));
 
         const withdrawResult = await vault.sendWithdraw(
             cashier.getSender(), randomSender.address, toNano(5)

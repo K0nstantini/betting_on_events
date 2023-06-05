@@ -63,9 +63,9 @@ export class JettonWallet implements Contract {
         });
     }
 
-    async sendBurnForTon(provider: ContractProvider, via: Sender, jettonAmount: bigint) {
+    async sendBurnForTon(provider: ContractProvider, via: Sender, value: bigint, jettonAmount: bigint) {
         await provider.internal(via, {
-            value: '0.12',
+            value,
             sendMode: SendMode.PAY_GAS_SEPARATELY,
             body: beginCell()
                 .storeUint(Opcodes.burn, 32)

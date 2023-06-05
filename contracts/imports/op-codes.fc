@@ -10,6 +10,7 @@ int op::burn_notification() asm "0x7bdd97de PUSHINT";
 int op::mint() asm "21 PUSHINT";
 int op::provide_wallet_address() asm "0x2c76b973 PUSHINT";
 int op::take_wallet_address() asm "0xd1735400 PUSHINT";
+int op::return_tokens() asm "0xee878b51 PUSHINT";
 
 int op::burned_bet_for_ton() asm "0x6e5e11b2 PUSHINT";
 int op::burned_bet_for_gov() asm "0x635294cd PUSHINT";

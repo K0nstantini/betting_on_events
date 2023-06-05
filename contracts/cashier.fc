@@ -12,15 +12,9 @@ const gov_start_price = 1000;
 const min_bet_for_change = 100;
 
 const consumed_gas = 15000000; ;; 0.015 TON
-const minter_send_value = 30000000; ;; 0.030 TON
-const vault_send_value = 10000000; ;; 0.010 TON
-
-;; const buy_bet_value = 30000000; ;; 0.03 TON
-;; const sell_bet_value = 10000000; ;; 0.01 TON
-;; const buy_gov_value = 30000000; ;; 0.03 TON
-;; const buy_gov_change_value = 30000000; ;; 0.03
-;; const sell_gov_value = 30000000; ;; 0.03
-;; const check_settings_gas = 10000000; ;; 0.01 TON
+const minter_send_value = 30000000; ;; 0.03 TON
+const return_to_minter_send_value = 10000000; ;; 0.01 TON
+const vault_send_value = 10000000; ;; 0.01 TON
 
 const bet_buy_fee = "bet_buy_fee"c;
 const bet_sell_fee = "bet_sell_fee"c;
@@ -141,8 +135,6 @@ int change_setting(int value, int step, int min, int max, int sign) inline {
     }
 
     slice sender_addr = cs~load_msg_addr();
-    int ton_balance_before_msg = my_balance - msg_value;
-    msg_value -= const::min_tons_for_storage() - min(ton_balance_before_msg, const::min_tons_for_storage());
 
     int op = in_msg_body~load_uint(32);
     int query_id = in_msg_body~load_uint(64);
@@ -154,7 +146,7 @@ int change_setting(int value, int step, int min, int max, int sign) inline {
     ;; buy BET
     if (op == op::deposit_ton()) {
         throw_unless(error::invalid_sender_addr(), equal_slices(sender_addr, vault));
-        throw_unless(error::not_enough_gas_amount(), msg_value >= consumed_gas + minter_send_value);
+        throw_unless(error::not_enough_gas_amount(), msg_value > consumed_gas +  vault_send_value);
 
         slice to_addr = in_msg_body~load_msg_addr();
         int ton_amount = in_msg_body~load_coins();
@@ -183,7 +175,10 @@ int change_setting(int value, int step, int min, int max, int sign) inline {
 
             ;; buy GOV
             if (burning_op == op::burned_bet_for_gov()) {
-                throw_unless(error::not_enough_gas_amount(), msg_value >= consumed_gas + 2 * minter_send_value);
+                if (msg_value < consumed_gas + 2 * minter_send_value) {
+                    send_coins(bet_minter, to_addr, amount, op::return_tokens(), return_to_minter_send_value, query_id);
+                    return ();
+                }
 
                 (int gov_amount, int change) = gov_for_bet(amount, gov_supply, bet_supply, ton_supply, fees);
                 change = change >= min_bet_for_change ? change : 0;
@@ -203,12 +198,24 @@ int change_setting(int value, int step, int min, int max, int sign) inline {
 
                 ;; sell BET
             } else {
-                throw_unless(error::not_enough_gas_amount(), msg_value >= consumed_gas + vault_send_value);
+                int ton_balance_before_msg = my_balance - msg_value;
+                msg_value -= const::min_tons_for_storage() - min(ton_balance_before_msg, const::min_tons_for_storage());
+
+                if (msg_value < consumed_gas + vault_send_value) {
+                    send_coins(bet_minter, to_addr, amount, op::return_tokens(), return_to_minter_send_value, query_id);
+                    return ();
+                }
 
                 int ton_amount = ton_for_bet(amount, fees);
-
                 supplies = combine_supplies(ton_supply - ton_amount, bet_supply - amount, gov_supply);
-                msg_value =  my_balance - const::max_tons_for_storage();
+
+                msg_value = (
+                        ton_balance_before_msg > const::max_tons_for_storage()
+                                ? my_balance - const::max_tons_for_storage()
+                                : msg_value
+                ) - vault_send_value;
+
+                msg_value = my_balance - const::max_tons_for_storage();
                 send_coins(vault, to_addr, ton_amount, op::withdraw_ton(), msg_value, query_id);
 
                 save_data(addresses, supplies, fees);
@@ -218,7 +225,10 @@ int change_setting(int value, int step, int min, int max, int sign) inline {
 
         ;; sell GOV
         if (equal_slices(sender_addr, gov_minter)) {
-            throw_unless(error::not_enough_gas_amount(), msg_value >= consumed_gas + minter_send_value);
+            if (msg_value < consumed_gas + minter_send_value) {
+                send_coins(bet_minter, to_addr, amount, op::return_tokens(), return_to_minter_send_value, query_id);
+                return ();
+            }
 
             int bet_amount = bet_for_gov(amount, gov_supply, bet_supply, ton_supply, fees);
 
