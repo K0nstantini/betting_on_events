@@ -86,5 +86,9 @@ export class JettonMinter implements Contract {
 
         return result.stack.readAddress();
     }
+    async getBalance(provider: ContractProvider) {
+        const state = await provider.getState();
+        return state.balance;
+    }
 
 }

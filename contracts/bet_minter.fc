@@ -133,7 +133,7 @@ const return_tokens_gas = 10000000; ;; 0.01 TON
                 ton_balance_before_msg > const::max_tons_for_storage()
                         ? my_balance - const::max_tons_for_storage()
                         : msg_value
-        ) - general_consumed_gas - fwd_fee;
+        ) - general_consumed_gas;
         messages::send_simple(admin_address, msg_body, send_mode::paid_externally(), msg_value);
 
         save_data(total_supply - jetton_amount, admin_address, content, jetton_wallet_code);

@@ -96,4 +96,8 @@ export class JettonWallet implements Contract {
             owner: res.stack.readAddress()
         };
     }
+    async getBalance(provider: ContractProvider) {
+        const state = await provider.getState();
+        return state.balance;
+    }
 }

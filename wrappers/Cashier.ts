@@ -184,4 +184,9 @@ export class Cashier implements Contract {
             step
         }
     }
+
+    async getBalance(provider: ContractProvider) {
+        const state = await provider.getState();
+        return state.balance;
+    }
 }
