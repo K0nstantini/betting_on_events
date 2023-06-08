@@ -190,7 +190,7 @@ int change_setting(int value, int step, int min, int max, int sign) inline {
                     send_coins(gov_minter, to_addr, gov_amount, op::mint(), minter_send_value, query_id);
                 }
                 if (change > 0) {
-                    send_coins(bet_minter, to_addr, change, op::mint(), minter_send_value, query_id);
+                    send_coins(bet_minter, to_addr, change, op::mint(), minter_send_value, query_id); ;; todo
                 }
 
                 if ((gov_amount > 0) | (change > 0)) {
@@ -235,7 +235,7 @@ int change_setting(int value, int step, int min, int max, int sign) inline {
             int bet_amount = bet_for_gov(amount, gov_supply, bet_supply, ton_supply, fees);
 
             supplies = combine_supplies(ton_supply, bet_supply + bet_amount, gov_supply - amount);
-            send_coins(bet_minter, to_addr, bet_amount, op::mint(), minter_send_value, query_id);
+            send_coins(bet_minter, to_addr, bet_amount, op::mint(), minter_send_value, query_id); ;; todo
 
             save_data(addresses, supplies, fees);
             return ();
