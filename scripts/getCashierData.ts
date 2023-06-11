@@ -20,6 +20,9 @@ export async function run(provider: NetworkProvider, args: string[]) {
     await showFee(ui, cashier, "GOV Buy", "gov_buy_fee");
     await showFee(ui, cashier, "GOV Sell", "gov_sell_fee");
 
+    const govPrice = await cashier.getGovPrice();
+    ui.write(`Gov price: ${govPrice} BET`);
+
 }
 
 async function showFee(ui: UIProvider, cashier: OpenedContract<Cashier>, name: string, key: string) {

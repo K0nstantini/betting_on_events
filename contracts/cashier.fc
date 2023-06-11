@@ -13,7 +13,7 @@ const min_bet_for_change = 100;
 
 const gas_consumption = 15000000; ;; 0.015 TON
 const minter_send_value = 30000000; ;; 0.03 TON
-const return_to_minter_send_value = 10000000; ;; 0.01 TON
+const minter_existed_wallet_send_value = 20000000; ;; 0.02 TON
 const vault_send_value = 10000000; ;; 0.01 TON
 
 const bet_buy_fee = "bet_buy_fee"c;
@@ -64,13 +64,20 @@ cell combine_supplies(int ton_supply, int bet_supply, int gov_supply) impure inl
             .end_cell();
 }
 
-int get_fee(int amount, cell dic, int id) impure inline_ref {
+int get_fee_factor(cell dic, int id) impure inline {
     (cell payload, int success) = dic.udict_get_ref?(32, id);
     throw_unless(error::dict_value_not_found(), success);
     slice ds = payload.begin_parse();
     ds~skip_bits(2);
-    int factor = ds~load_int(16);
-    return muldiv(amount, factor, fee_accuracy);
+    return ds~load_int(16);
+}
+
+int sum_with_fee(int amount, int fee_factor) inline {
+    return amount - muldiv(amount, fee_factor, fee_accuracy);
+}
+
+int sum_without_fee(int amount, int fee_factor) inline {
+    return muldiv(amount, fee_accuracy, fee_accuracy - fee_factor);
 }
 
 () send_coins(slice destination, slice user_addr, int token_amount, int op, int msg_value, int query_id) impure inline_ref {
@@ -87,36 +94,37 @@ int get_fee(int amount, cell dic, int id) impure inline_ref {
 }
 
 int bet_for_ton(int amount, cell fees) impure inline {
-    int fee = get_fee(amount, fees, bet_buy_fee);
-    return (amount - fee) / bet_accuracy;
+    return sum_with_fee(amount, get_fee_factor(fees, bet_buy_fee)) / bet_accuracy;
 }
 
-int ton_for_bet(int amount, cell fees) inline {
-    amount *= bet_accuracy;
-    int fee = get_fee(amount, fees, bet_sell_fee);
-    return amount - fee;
+int ton_for_bet(int amount, cell fees) impure inline {
+    return sum_with_fee(amount * bet_accuracy, get_fee_factor(fees, bet_sell_fee));
 }
 
-(int, int) gov_for_bet(int amount, int gov_supply, int bet_supply, int ton_supply, cell fees) inline {
-    int fee = get_fee(amount, fees, gov_buy_fee);
-    int amount_with_fee = amount - fee;
+(int, int) gov_for_bet(int amount, int gov_supply, int bet_supply, int ton_supply, cell fees) impure inline {
+    int fee_factor = get_fee_factor(fees, gov_buy_fee);
+    int amount_with_fee = sum_with_fee(amount, fee_factor);
     int govs = 0;
     int change = 0;
     if (gov_supply > 0) {
         int diff = ton_supply / bet_accuracy - bet_supply;
         govs = muldiv(amount_with_fee, gov_supply, diff);
-        change = govs == 0 ? amount : muldiv(govs, diff, gov_supply);
+        change = govs == 0
+                ? amount
+                : sum_without_fee(amount_with_fee - muldiv(govs, diff, gov_supply), fee_factor);
     } else {
         govs = amount_with_fee / gov_start_price;
-        change = govs == 0 ? amount : amount_with_fee % gov_start_price;
+        change = govs == 0
+                ? amount
+                : sum_without_fee(amount_with_fee % gov_start_price, fee_factor);
+
     }
     return (govs, change);
 }
 
 int bet_for_gov(int amount, int gov_supply, int bet_supply, int ton_supply, cell fees) inline {
     amount = muldiv(amount, ton_supply / bet_accuracy - bet_supply, gov_supply);
-    int fee = get_fee(amount, fees, gov_sell_fee);
-    return amount - fee;
+    return sum_with_fee(amount, get_fee_factor(fees, gov_sell_fee));
 }
 
 int change_setting(int value, int step, int min, int max, int sign) inline {
@@ -124,6 +132,11 @@ int change_setting(int value, int step, int min, int max, int sign) inline {
     return (sign > 0) ?
             ((value > max) ? max : value) :
             ((value < min) ? min : value);
+}
+
+() return_tokens(slice destination, slice user_addr, int token_amount, int msg_value, int query_id) impure inline {
+    throw_unless(error::not_enough_gas_amount(), msg_value >= minter_existed_wallet_send_value);
+    send_coins(destination, user_addr, token_amount, op::return_tokens(), minter_existed_wallet_send_value, query_id);
 }
 
 () recv_internal(int my_balance, int msg_value, cell in_msg_full, slice in_msg_body) impure {
@@ -178,22 +191,19 @@ int change_setting(int value, int step, int min, int max, int sign) inline {
 
             ;; buy GOV
             if (burning_op == op::burned_bet_for_gov()) {
-                if (msg_value < gas_consumption + 2 * minter_send_value) {
-                    send_coins(bet_minter, to_addr, amount, op::return_tokens(), return_to_minter_send_value, query_id);
+                if (msg_value < gas_consumption + minter_send_value + minter_existed_wallet_send_value) {
+                    return_tokens(bet_minter, to_addr, amount, msg_value, query_id);
                     return ();
                 }
 
                 (int gov_amount, int change) = gov_for_bet(amount, gov_supply, bet_supply, ton_supply, fees);
                 change = change >= min_bet_for_change ? change : 0;
 
+                if (change > 0) {
+                    return_tokens(bet_minter, to_addr, change, msg_value, query_id);
+                }
                 if (gov_amount > 0) {
                     send_coins(gov_minter, to_addr, gov_amount, op::mint(), minter_send_value, query_id);
-                }
-                if (change > 0) {
-                    send_coins(bet_minter, to_addr, change, op::mint(), minter_send_value, query_id); ;; todo
-                }
-
-                if ((gov_amount > 0) | (change > 0)) {
                     supplies = combine_supplies(ton_supply, bet_supply - amount + change, gov_supply + gov_amount);
                     save_data(addresses, supplies, fees);
                 }
@@ -205,7 +215,7 @@ int change_setting(int value, int step, int min, int max, int sign) inline {
                 msg_value -= const::min_tons_for_storage() - min(ton_balance_before_msg, const::min_tons_for_storage());
 
                 if (msg_value < gas_consumption + vault_send_value) {
-                    send_coins(bet_minter, to_addr, amount, op::return_tokens(), return_to_minter_send_value, query_id);
+                    send_coins(bet_minter, to_addr, amount, op::return_tokens(), minter_existed_wallet_send_value, query_id);
                     return ();
                 }
 
@@ -228,7 +238,7 @@ int change_setting(int value, int step, int min, int max, int sign) inline {
         ;; sell GOV
         if (equal_slices(sender_addr, gov_minter)) {
             if (msg_value < gas_consumption + minter_send_value) {
-                send_coins(bet_minter, to_addr, amount, op::return_tokens(), return_to_minter_send_value, query_id);
+                return_tokens(bet_minter, to_addr, amount, msg_value, query_id);
                 return ();
             }
 

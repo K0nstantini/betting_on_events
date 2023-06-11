@@ -145,7 +145,7 @@ export class Cashier implements Contract {
     }
 
     async getSupplies(provider: ContractProvider) {
-        const result = await provider.get('get_cashier_data', []);
+        const result = await this.getData(provider);
         result.stack.readCell();
         const supplies = result.stack.readCell();
         const ds = supplies.beginParse();
@@ -153,7 +153,7 @@ export class Cashier implements Contract {
     }
 
     async getAddresses(provider: ContractProvider) {
-        const result = await provider.get('get_cashier_data', []);
+        const result = await this.getData(provider);
         let addresses = result.stack.readCell();
         let ds = addresses.beginParse();
         const vault = ds.loadAddress();
@@ -166,7 +166,7 @@ export class Cashier implements Contract {
     }
 
     async getFee(provider: ContractProvider, key: string) {
-        const result = await provider.get('get_cashier_data', []);
+        const result = await this.getData(provider);
         result.stack.readCell();
         result.stack.readCell();
         const fees = result.stack.readCell();
@@ -183,6 +183,23 @@ export class Cashier implements Contract {
             value,
             step
         }
+    }
+
+    async getGovPrice(provider: ContractProvider) {
+        const result = await this.getData(provider);
+        result.stack.readCell();
+        const supplies = result.stack.readCell();
+        const ds = supplies.beginParse();
+        const [ton, bet, gov] = [ds.loadCoins(), ds.loadCoins(), ds.loadCoins()];
+        if (gov == BigInt(0)) {
+            return 1_000;
+        } else {
+            return Number((ton / BigInt(1_000_000) - bet) / gov);
+        }
+    }
+
+    async getData(provider: ContractProvider) {
+        return await provider.get('get_cashier_data', []);
     }
 
     async getBalance(provider: ContractProvider) {
