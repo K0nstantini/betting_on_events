@@ -162,7 +162,7 @@ int change_setting(int value, int step, int min, int max, int sign) inline {
     ;; buy BET
     if (op == op::deposit_ton()) {
         throw_unless(error::invalid_sender_addr(), equal_slices(sender_addr, vault));
-        throw_unless(error::not_enough_gas_amount(), msg_value > gas_consumption +  vault_send_value);
+        throw_unless(error::not_enough_gas_amount(), msg_value >= gas_consumption +  minter_send_value);
 
         slice to_addr = in_msg_body~load_msg_addr();
         int ton_amount = in_msg_body~load_coins();
@@ -237,15 +237,10 @@ int change_setting(int value, int step, int min, int max, int sign) inline {
 
         ;; sell GOV
         if (equal_slices(sender_addr, gov_minter)) {
-            if (msg_value < gas_consumption + minter_send_value) {
-                return_tokens(bet_minter, to_addr, amount, msg_value, query_id);
-                return ();
-            }
-
-            int bet_amount = bet_for_gov(amount, gov_supply, bet_supply, ton_supply, fees);
+             int bet_amount = bet_for_gov(amount, gov_supply, bet_supply, ton_supply, fees);
 
             supplies = combine_supplies(ton_supply, bet_supply + bet_amount, gov_supply - amount);
-            send_coins(bet_minter, to_addr, bet_amount, op::mint(), minter_send_value, query_id); ;; todo
+            return_tokens(bet_minter, to_addr, bet_amount, minter_send_value, query_id);
 
             save_data(addresses, supplies, fees);
             return ();

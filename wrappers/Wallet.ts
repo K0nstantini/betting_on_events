@@ -76,9 +76,9 @@ export class JettonWallet implements Contract {
         });
     }
 
-    async sendBurnForGov(provider: ContractProvider, via: Sender, jettonAmount: bigint) {
+    async sendBurnForGov(provider: ContractProvider, via: Sender, value: bigint, jettonAmount: bigint) {
         await provider.internal(via, {
-            value: '0.12',
+            value,
             sendMode: SendMode.PAY_GAS_SEPARATELY,
             body: beginCell()
                 .storeUint(Opcodes.burn, 32)
@@ -89,9 +89,9 @@ export class JettonWallet implements Contract {
         });
     }
 
-    async sendBurn(provider: ContractProvider, via: Sender, jettonAmount: bigint) {
+    async sendBurn(provider: ContractProvider, via: Sender, value: bigint, jettonAmount: bigint) {
         await provider.internal(via, {
-            value: '0.12',
+            value,
             sendMode: SendMode.PAY_GAS_SEPARATELY,
             body: beginCell()
                 .storeUint(Opcodes.burn, 32)
@@ -108,6 +108,7 @@ export class JettonWallet implements Contract {
             owner: res.stack.readAddress()
         };
     }
+
     async getBalance(provider: ContractProvider) {
         const state = await provider.getState();
         return state.balance;

@@ -55,7 +55,7 @@ export class Cashier implements Contract {
 
     async sendBuyBet(provider: ContractProvider, via: Sender, value: bigint, balance: bigint) {
         await provider.internal(via, {
-            value: '0.03',
+            value: '0.045',
             sendMode: SendMode.PAY_GAS_SEPARATELY,
             body: beginCell()
                 .storeUint(Opcodes.depositTon, 32)
@@ -69,7 +69,7 @@ export class Cashier implements Contract {
 
     async sendSellBet(provider: ContractProvider, via: Sender, value: bigint) {
         await provider.internal(via, {
-            value: '0.02',
+            value: '0.025',
             sendMode: SendMode.PAY_GAS_SEPARATELY,
             body: beginCell()
                 .storeUint(Opcodes.burnNotification, 32)
@@ -83,7 +83,7 @@ export class Cashier implements Contract {
 
     async sendBuyGov(provider: ContractProvider, via: Sender, value: bigint) {
         await provider.internal(via, {
-            value: '0.02',
+            value: '0.075',
             sendMode: SendMode.PAY_GAS_SEPARATELY,
             body: beginCell()
                 .storeUint(Opcodes.burnNotification, 32)
@@ -97,7 +97,7 @@ export class Cashier implements Contract {
 
     async sendSellGov(provider: ContractProvider, via: Sender, value: bigint) {
         await provider.internal(via, {
-            value: '0.02',
+            value: '0.04',
             sendMode: SendMode.PAY_GAS_SEPARATELY,
             body: beginCell()
                 .storeUint(Opcodes.burnNotification, 32)

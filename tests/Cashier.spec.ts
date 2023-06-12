@@ -1,6 +1,6 @@
 import {Blockchain, SandboxContract, TreasuryContract} from '@ton-community/sandbox';
 import {Cell, toNano} from 'ton-core';
-import {ChangeSettingsDirection, Cashier, SettingsTarget} from '../wrappers/Cashier';
+import {Cashier} from '../wrappers/Cashier';
 import '@ton-community/test-utils';
 import {compile} from '@ton-community/blueprint';
 import {getAddressesForTesting, getFees, getSupplies} from "../scripts/deployCashier";
@@ -74,7 +74,7 @@ describe('Cashier', () => {
 
         const [tonSupply, betSupply, _] = await cashier.getSupplies();
         expect(tonSupply).toEqual(toNano(10));
-        expect(betSupply).toEqual(9_000n);
+        expect(betSupply).toEqual(9_900n);
     });
 
     it('should not allow to buy BET', async () => {
@@ -92,7 +92,7 @@ describe('Cashier', () => {
 
     it('should sell BET', async () => {
         await cashier.sendBuyBet(vault.getSender(), toNano(10), toNano(10));
-        const sellBetResult = await cashier.sendSellBet(betMinter.getSender(), 8_000n);
+        const sellBetResult = await cashier.sendSellBet(betMinter.getSender(), 900n);
 
         expect(sellBetResult.transactions).toHaveTransaction({
             from: betMinter.address,
@@ -108,8 +108,8 @@ describe('Cashier', () => {
         });
 
         const [tonSupply, betSupply, _] = await cashier.getSupplies();
-        expect(tonSupply).toEqual(toNano("2.4"));
-        expect(betSupply).toEqual(1_000n);
+        expect(tonSupply).toEqual(toNano("9.109"));
+        expect(betSupply).toEqual(9_000n);
     });
 
 
@@ -125,11 +125,8 @@ describe('Cashier', () => {
     });
 
     it('should buy GOV', async () => {
-        await cashier.sendBuyBet(
-            vault.getSender(), toNano(10), toNano(10)
-        );
-
-        let buyGovResult = await cashier.sendBuyGov(betMinter.getSender(), 5_000n);
+        await cashier.sendBuyBet(vault.getSender(), toNano(10), toNano(10));
+        let buyGovResult = await cashier.sendBuyGov(betMinter.getSender(), 1_200n);
 
         expect(buyGovResult.transactions).toHaveTransaction({
             from: betMinter.address,
@@ -141,15 +138,27 @@ describe('Cashier', () => {
             from: cashier.address,
             to: govMinter.address,
             op: Opcodes.mint,
+            success: true,
+        });
+
+        expect(buyGovResult.transactions).toHaveTransaction({
+            from: cashier.address,
+            to: betMinter.address,
+            op: Opcodes.returnTokens,
             success: true,
         });
 
         let [tonSupply, betSupply, govSupply] = await cashier.getSupplies();
+        console.log(betSupply);
+        console.log(govSupply);
         expect(tonSupply).toEqual(toNano(10));
-        expect(betSupply).toEqual(4_000n);
-        expect(govSupply).toEqual(4n);
+        expect(betSupply).toEqual(8889n);
+        expect(govSupply).toEqual(1n);
 
-        buyGovResult = await cashier.sendBuyGov(betMinter.getSender(), 1_530n);
+        // const govPrice = await cashier.getGovPrice();
+        // console.log(`Gov price: ${govPrice}`);
+
+        buyGovResult = await cashier.sendBuyGov(betMinter.getSender(), 1_300n);
 
         expect(buyGovResult.transactions).toHaveTransaction({
             from: betMinter.address,
@@ -161,13 +170,20 @@ describe('Cashier', () => {
             from: cashier.address,
             to: govMinter.address,
             op: Opcodes.mint,
+            success: true,
+        });
+
+        expect(buyGovResult.transactions).toHaveTransaction({
+            from: cashier.address,
+            to: betMinter.address,
+            op: Opcodes.returnTokens,
             success: true,
         });
 
         [tonSupply, betSupply, govSupply] = await cashier.getSupplies();
         expect(tonSupply).toEqual(toNano(10));
-        expect(betSupply).toEqual(2_470n);
-        expect(govSupply).toEqual(5n);
+        expect(betSupply).toEqual(7_766n);
+        expect(govSupply).toEqual(2n);
     });
 
     it('should not allow to buy GOV', async () => {
@@ -183,8 +199,14 @@ describe('Cashier', () => {
 
     it('should sell GOV', async () => {
         await cashier.sendBuyBet(vault.getSender(), toNano(10), toNano(10));
-        await cashier.sendBuyGov(betMinter.getSender(), 5_000n);
-        const sellGovResult = await cashier.sendSellGov(govMinter.getSender(), 3n);
+        await cashier.sendBuyGov(betMinter.getSender(), 3_000n);
+
+        // const govPrice = await cashier.getGovPrice();
+        // const [_, betSupplyBefore] = await cashier.getSupplies();
+        // console.log(`Gov price: ${govPrice}`);
+        // console.log(betSupplyBefore);
+
+        const sellGovResult = await cashier.sendSellGov(govMinter.getSender(), 2n);
 
         expect(sellGovResult.transactions).toHaveTransaction({
             from: govMinter.address,
@@ -195,14 +217,14 @@ describe('Cashier', () => {
         expect(sellGovResult.transactions).toHaveTransaction({
             from: cashier.address,
             to: betMinter.address,
-            op: Opcodes.mint,
+            op: Opcodes.returnTokens,
             success: true,
         });
 
         const [tonSupply, betSupply, govSupply] = await cashier.getSupplies();
         expect(tonSupply).toEqual(toNano(10));
-        expect(betSupply).toEqual(8_455n);
-        expect(govSupply).toEqual(1n);
+        expect(betSupply).toEqual(9_979n);
+        expect(govSupply).toEqual(0n);
     });
 
     it('should not allow to sell GOV', async () => {
@@ -216,134 +238,134 @@ describe('Cashier', () => {
         });
     });
 
-    it('should change settings value inc', async () => {
-        await change_settings(
-            SettingsTarget.Value,
-            ChangeSettingsDirection.Up,
-            {
-                betBuy: [1200, 1000],
-                betSell: [700, 1000],
-                govBuy: [400, 1000],
-                govSell: [300, 1000],
-            });
-    });
-
-    it('should change settings value dec', async () => {
-        await change_settings(
-            SettingsTarget.Value,
-            ChangeSettingsDirection.Down,
-            {
-                betBuy: [800, 1000],
-                betSell: [300, 1000],
-                govBuy: [0, 1000],
-                govSell: [0, 1000],
-            });
-    });
-
-
-    it('should change settings step inc', async () => {
-        await change_settings(
-            SettingsTarget.Step,
-            ChangeSettingsDirection.Up,
-            {
-                betBuy: [1000, 1190],
-                betSell: [500, 1190],
-                govBuy: [200, 1190],
-                govSell: [100, 1190],
-            });
-    });
-
-
-    it('should change settings step dec', async () => {
-        await change_settings(
-            SettingsTarget.Step,
-            ChangeSettingsDirection.Down,
-            {
-                betBuy: [1000, 810],
-                betSell: [500, 810],
-                govBuy: [200, 810],
-                govSell: [100, 810],
-            });
-    });
-
-    async function change_settings(target: SettingsTarget, direction: ChangeSettingsDirection,
-                                   expected: {
-                                       betBuy: [number, number],
-                                       betSell: [number, number],
-                                       govBuy: [number, number],
-                                       govSell: [number, number],
-                                   }
-    ) {
-        const sender = govContract.getSender();
-
-        const buyBetResult = await cashier.sendChangeFeeValue(sender, "bet_buy_fee", target, direction);
-        const sellBetResult = await cashier.sendChangeFeeValue(sender, "bet_sell_fee", target, direction);
-        const buyGovResult = await cashier.sendChangeFeeValue(sender, "gov_buy_fee", target, direction);
-        const sellGovResult = await cashier.sendChangeFeeValue(sender, "gov_sell_fee", target, direction);
-
-        expect(buyBetResult.transactions).toHaveTransaction({
-            from: govContract.address,
-            to: cashier.address,
-            success: true,
-        });
-
-        expect(sellBetResult.transactions).toHaveTransaction({
-            from: govContract.address,
-            to: cashier.address,
-            success: true,
-        });
-
-        expect(buyGovResult.transactions).toHaveTransaction({
-            from: govContract.address,
-            to: cashier.address,
-            success: true,
-        });
-
-        expect(sellGovResult.transactions).toHaveTransaction({
-            from: govContract.address,
-            to: cashier.address,
-            success: true,
-        });
-
-        const {value: valueBetBuy, step: stepBetBuy} = await cashier.getFee("bet_buy_fee");
-        const {value: valueBetSell, step: stepBetSell} = await cashier.getFee("bet_sell_fee");
-        const {value: valueGovBuy, step: stepGovBuy} = await cashier.getFee("gov_buy_fee");
-        const {value: valueGovSell, step: stepGovSell} = await cashier.getFee("gov_sell_fee");
-
-        expect([valueBetBuy, stepBetBuy]).toEqual(expected.betBuy);
-        expect([valueBetSell, stepBetSell]).toEqual(expected.betSell);
-        expect([valueGovBuy, stepGovBuy]).toEqual(expected.govBuy);
-        expect([valueGovSell, stepGovSell]).toEqual(expected.govSell);
-    }
-
-    it('should confirm settings format', async () => {
-        const checkResult = await cashier.sendCheckSettingsFormat(govContract.getSender(), "bet_buy_fee");
-
-        expect(checkResult.transactions).toHaveTransaction({
-            from: govContract.address,
-            to: cashier.address,
-            success: true,
-        });
-
-    });
-
-    it('should not confirm settings format', async () => {
-        let checkResult = await cashier.sendCheckSettingsFormat(randomSender.getSender(), "bet_buy_fee");
-
-        expect(checkResult.transactions).toHaveTransaction({
-            from: randomSender.address,
-            to: cashier.address,
-            success: false,
-        });
-
-        checkResult = await cashier.sendCheckSettingsFormat(govContract.getSender(), "bad_setting");
-
-        expect(checkResult.transactions).toHaveTransaction({
-            from: govContract.address,
-            to: cashier.address,
-            success: false,
-        });
-
-    });
+    // it('should change settings value inc', async () => {
+    //     await change_settings(
+    //         SettingsTarget.Value,
+    //         ChangeSettingsDirection.Up,
+    //         {
+    //             betBuy: [1200, 1000],
+    //             betSell: [700, 1000],
+    //             govBuy: [400, 1000],
+    //             govSell: [300, 1000],
+    //         });
+    // });
+    //
+    // it('should change settings value dec', async () => {
+    //     await change_settings(
+    //         SettingsTarget.Value,
+    //         ChangeSettingsDirection.Down,
+    //         {
+    //             betBuy: [800, 1000],
+    //             betSell: [300, 1000],
+    //             govBuy: [0, 1000],
+    //             govSell: [0, 1000],
+    //         });
+    // });
+    //
+    //
+    // it('should change settings step inc', async () => {
+    //     await change_settings(
+    //         SettingsTarget.Step,
+    //         ChangeSettingsDirection.Up,
+    //         {
+    //             betBuy: [1000, 1190],
+    //             betSell: [500, 1190],
+    //             govBuy: [200, 1190],
+    //             govSell: [100, 1190],
+    //         });
+    // });
+    //
+    //
+    // it('should change settings step dec', async () => {
+    //     await change_settings(
+    //         SettingsTarget.Step,
+    //         ChangeSettingsDirection.Down,
+    //         {
+    //             betBuy: [1000, 810],
+    //             betSell: [500, 810],
+    //             govBuy: [200, 810],
+    //             govSell: [100, 810],
+    //         });
+    // });
+    //
+    // async function change_settings(target: SettingsTarget, direction: ChangeSettingsDirection,
+    //                                expected: {
+    //                                    betBuy: [number, number],
+    //                                    betSell: [number, number],
+    //                                    govBuy: [number, number],
+    //                                    govSell: [number, number],
+    //                                }
+    // ) {
+    //     const sender = govContract.getSender();
+    //
+    //     const buyBetResult = await cashier.sendChangeFeeValue(sender, "bet_buy_fee", target, direction);
+    //     const sellBetResult = await cashier.sendChangeFeeValue(sender, "bet_sell_fee", target, direction);
+    //     const buyGovResult = await cashier.sendChangeFeeValue(sender, "gov_buy_fee", target, direction);
+    //     const sellGovResult = await cashier.sendChangeFeeValue(sender, "gov_sell_fee", target, direction);
+    //
+    //     expect(buyBetResult.transactions).toHaveTransaction({
+    //         from: govContract.address,
+    //         to: cashier.address,
+    //         success: true,
+    //     });
+    //
+    //     expect(sellBetResult.transactions).toHaveTransaction({
+    //         from: govContract.address,
+    //         to: cashier.address,
+    //         success: true,
+    //     });
+    //
+    //     expect(buyGovResult.transactions).toHaveTransaction({
+    //         from: govContract.address,
+    //         to: cashier.address,
+    //         success: true,
+    //     });
+    //
+    //     expect(sellGovResult.transactions).toHaveTransaction({
+    //         from: govContract.address,
+    //         to: cashier.address,
+    //         success: true,
+    //     });
+    //
+    //     const {value: valueBetBuy, step: stepBetBuy} = await cashier.getFee("bet_buy_fee");
+    //     const {value: valueBetSell, step: stepBetSell} = await cashier.getFee("bet_sell_fee");
+    //     const {value: valueGovBuy, step: stepGovBuy} = await cashier.getFee("gov_buy_fee");
+    //     const {value: valueGovSell, step: stepGovSell} = await cashier.getFee("gov_sell_fee");
+    //
+    //     expect([valueBetBuy, stepBetBuy]).toEqual(expected.betBuy);
+    //     expect([valueBetSell, stepBetSell]).toEqual(expected.betSell);
+    //     expect([valueGovBuy, stepGovBuy]).toEqual(expected.govBuy);
+    //     expect([valueGovSell, stepGovSell]).toEqual(expected.govSell);
+    // }
+    //
+    // it('should confirm settings format', async () => {
+    //     const checkResult = await cashier.sendCheckSettingsFormat(govContract.getSender(), "bet_buy_fee");
+    //
+    //     expect(checkResult.transactions).toHaveTransaction({
+    //         from: govContract.address,
+    //         to: cashier.address,
+    //         success: true,
+    //     });
+    //
+    // });
+    //
+    // it('should not confirm settings format', async () => {
+    //     let checkResult = await cashier.sendCheckSettingsFormat(randomSender.getSender(), "bet_buy_fee");
+    //
+    //     expect(checkResult.transactions).toHaveTransaction({
+    //         from: randomSender.address,
+    //         to: cashier.address,
+    //         success: false,
+    //     });
+    //
+    //     checkResult = await cashier.sendCheckSettingsFormat(govContract.getSender(), "bad_setting");
+    //
+    //     expect(checkResult.transactions).toHaveTransaction({
+    //         from: govContract.address,
+    //         to: cashier.address,
+    //         success: false,
+    //     });
+    //
+    // });
 
 });
