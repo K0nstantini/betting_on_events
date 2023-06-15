@@ -17,6 +17,7 @@ int op::burned_bet_for_gov() asm "0x635294cd PUSHINT";
 int op::burned_bet_for_nothing() asm "0x7d2b7dfd PUSHINT";
 
 int op::voting() asm "0xfc28da55 PUSHINT";
+int op::update_gov_supply() asm "0x12616f76 PUSHINT";
 
 int op::sent_ton() asm "0x2826e632 PUSHINT";
 int op::send_ton() asm "0x48c671b0 PUSHINT";

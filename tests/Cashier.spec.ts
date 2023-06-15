@@ -149,8 +149,8 @@ describe('Cashier', () => {
         });
 
         let [tonSupply, betSupply, govSupply] = await cashier.getSupplies();
-        console.log(betSupply);
-        console.log(govSupply);
+        // console.log(betSupply);
+        // console.log(govSupply);
         expect(tonSupply).toEqual(toNano(10));
         expect(betSupply).toEqual(8889n);
         expect(govSupply).toEqual(1n);
