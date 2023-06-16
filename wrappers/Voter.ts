@@ -13,6 +13,7 @@ import {
 export type VoterConfig = {
     addresses: Cell,
     pool: Dictionary<number, Cell>,
+    settings: Dictionary<number, Cell>,
     govSupply: bigint
 };
 
@@ -20,6 +21,7 @@ export function voteConfigToCell(config: VoterConfig): Cell {
     return beginCell()
         .storeRef(config.addresses)
         .storeDict(config.pool)
+        .storeDict(config.settings)
         .storeCoins(config.govSupply)
         .endCell();
 }

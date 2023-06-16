@@ -10,29 +10,27 @@ const cashier_id = "cashier"c;
 const wallet_id = "wallet"c;
 const votes_minter_id = "votes_minter"c;
 
-const votes_minter_send_value = 30000000; ;; 0.03 TON
+const instant_approve_id = "instant_approve"c;
+const half_approve_wait_id = "half_approve_wait"c;
 
-;; ===== pool =====
-;; last consensus: 0 - preserve, 1 - increase, 2 - decrease
-;; votes preserve
-;; votes increase
-;; votes decrease
-;; last vote time
-;; time to finalize
+const votes_minter_send_value = 30000000; ;; 0.03 TON
+const return_tokens_send_value = 30000000; ;; 0.03 TON
 
 (cell, cell, int) load_data() inline {
     slice ds = get_data().begin_parse();
     return (
             ds~load_ref(), ;; addresses
             ds~load_ref(), ;; pool
+            ds~load_ref(), ;; settings
             ds~load_coins() ;; gov supply
     );
 }
 
-() save_data(cell addresses, cell pool, int gov_supply) impure inline {
+() save_data(cell addresses, cell pool, cell settings, int gov_supply) impure inline {
     set_data(begin_cell()
             .store_ref(addresses)
             .store_ref(pool)
+            .store_ref(settings)
             .store_coins(gov_supply)
             .end_cell()
     );
@@ -53,7 +51,7 @@ int get_lot_id(slice addr, int id_set) inline {
     return cell_hash(cell_id);
 }
 
-(int, int, int, int) get_lot_data(cell payload) {
+(int, int, int, int, int, int) get_lot_data(cell payload) {
     slice ds = payload.begin_parse();
     return (
             ds~load_uint(2), ;; last consensus: 0 - preserve, 1 - increase, 2 - decrease
@@ -65,8 +63,61 @@ int get_lot_id(slice addr, int id_set) inline {
     );
 }
 
-;; int return_tokens(slice addr, int amount) impure inline {
-;; }
+int get_setting(cell dic, int id) impure inline {
+    (cell payload, int success) = dic.udict_get_ref?(32, id);
+    throw_unless(error::dict_value_not_found(), success);
+    slice ds = payload.begin_parse();
+    ds~skip_bits(2);
+    return ds~load_int(32);
+}
+
+cell update_pool(cell pool, int id, cell payload, int choice, int amount, int gov_supply, cell settings) impure inline {
+    (int last_consensus, int preserve, int increase, int decrease, int last_vote_time, int time_to_finalize) = get_lot_data(payload);
+    if (choice == 0) {
+        preserve += amount;
+    }
+    if (choice == 1) {
+        increase += amount;
+    }
+    if (choice == 2) {
+        decrease += amount;
+    }
+
+    int consensus_increase = increase - preserve - decrease;
+    int consensus_decrease = decrease - preserve - increase;
+    int (new_consensus, new_consensus_votes) = increase > 0 ? (1, increase)
+            : decrease > 0 ? (2, decrease)
+            : (0, 0);
+
+    int instant_approve = get_setting(settings, instant_approve_id);
+    int half_approve_wait = get_setting(settings, half_approve_wait_id);
+
+    int consensus_period = muldiv(half_approve_wait, instant_approve * gov_supply - new_consensus_votes, new_consensus_votes);
+
+    if (last_consensus == new_consensus) {
+        int time_passed = now() - last_vote_time;
+        int previous_period = time_to_finalize - last_vote_time;
+
+        last_vote_time -= consensus_period < previous_period
+                ? muldiv(consensus_period, time_passed, previous_period)
+                : time_passed;
+    } else {
+        last_vote_time = now();
+    }
+
+    time_to_finalize = last_vote_time + consensus_period;
+
+    payload = begin_cell()
+            .store_uint(new_consensus)
+            .store_coins(preserve)
+            .store_coins(increase)
+            .store_coins(decrease)
+            .store_uint(last_vote_time, 32)
+            .store_uint(time_to_finalize, 32)
+            .end_cell();
+    pool~udict_set_ref(32, id, payload);
+    return pool;
+}
 
 () send_coins(slice destination, slice user_addr, int token_amount, int op, int msg_value, int query_id) impure inline_ref {
     throw_unless(error::invalid_amount(), token_amount > 0);
@@ -96,22 +147,26 @@ int get_lot_id(slice addr, int id_set) inline {
     int op = in_msg_body~load_uint(32);
     int query_id = in_msg_body~load_uint(64);
 
-    (cell addresses, cell pool, int gov_supply) = load_data();
+    (cell addresses, cell pool, cell, settings, int gov_supply) = load_data();
 
     if (op == op::voting()) {
         slice wallet = get_address(addresses, wallet_id);
         throw_unless(error::invalid_sender_addr(), equal_slices(sender_addr, wallet));
 
-        slice to_addr = in_msg_body~load_msg_addr();
+        slice user_addr = in_msg_body~load_msg_addr();
         int amount = in_msg_body~load_coins();
 
         slice target = "";
         int id_set = 0;
+        int value = 0;
         try {
             target = in_msg_body~load_msg_addr(); ;; if target addr is wrong - gov tokens will be lost
             id_set = in_msg_body~load_uint(32);
+            choice = in_msg_body~load_uint(2);
+            throw_unless(error::invalid_data(), (choice >= 0) & (choice <= 2));
         } catch (_, _) {
-            ;;             return_tokens(to_addr, amount);
+            send_coins(sender_addr, user_addr, amount, op::return_tokens(), return_tokens_send_value, query_id);
+            return ();
         }
 
         int id = get_lot_id(target, id_set);
@@ -128,7 +183,7 @@ int get_lot_id(slice addr, int id_set) inline {
             ;; check votes
 
             slice votes_minter = get_address(addresses, votes_minter_id);
-            send_coins(votes_minter, to_addr, amount, op::mint(), votes_minter_send_value, query_id);
+            send_coins(votes_minter, user_addr, amount, op::mint(), votes_minter_send_value, query_id);
         } else {
         }
 
@@ -140,13 +195,12 @@ int get_lot_id(slice addr, int id_set) inline {
         throw_unless(error::invalid_sender_addr(), equal_slices(sender_addr, cashier));
         int new_supply = in_msg_body~load_coins();
         save_data(addresses, pool, new_supply);
-        ;; check votes
         return ();
     }
 
     throw(0xffff);
 }
 
-int get_voter_data() method_id {
-    return now();
+(cell, cell, int) get_voter_data() method_id {
+    return load_data();
 }

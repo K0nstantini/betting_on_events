@@ -24,6 +24,7 @@ describe('Voter', () => {
         voter = blockchain.openContract(Voter.createFromConfig({
             addresses: beginCell().endCell(),
             pool: Dictionary.empty(Dictionary.Keys.Uint(32), Dictionary.Values.Cell()),
+            settings: Dictionary.empty(Dictionary.Keys.Uint(32), Dictionary.Values.Cell()),
             govSupply: BigInt(0)
         }, code));
 
