@@ -10,5 +10,6 @@ export const Opcodes = {
     changeSettings: 0x4abfbc2b,
     checkSettingsFormat: 0x35aab65a,
     confirm: 0x8fd3a344,
-    changeAddr: 0x314ddb8e
+    changeAddr: 0x314ddb8e,
+    voting: 0xfc28da55,
 };

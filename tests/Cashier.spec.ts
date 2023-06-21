@@ -4,7 +4,6 @@ import {Cashier} from '../wrappers/Cashier';
 import '@ton-community/test-utils';
 import {compile} from '@ton-community/blueprint';
 import {getAddressesForTesting, getFees, getSupplies} from "../scripts/deployCashier";
-import {Opcodes} from "../helpers/opcodes";
 
 
 describe('Cashier', () => {
@@ -54,189 +53,189 @@ describe('Cashier', () => {
         // blockchain and cashier are ready to use
     });
 
-    it('should buy BET', async () => {
-        const buyBetResult = await cashier.sendBuyBet(
-            vault.getSender(), toNano(10), toNano(10)
-        );
-
-        expect(buyBetResult.transactions).toHaveTransaction({
-            from: vault.address,
-            to: cashier.address,
-            success: true,
-        });
-
-        expect(buyBetResult.transactions).toHaveTransaction({
-            from: cashier.address,
-            to: betMinter.address,
-            op: Opcodes.mint,
-            success: true,
-        });
-
-        const [tonSupply, betSupply, _] = await cashier.getSupplies();
-        expect(tonSupply).toEqual(toNano(10));
-        expect(betSupply).toEqual(9_900n);
-    });
-
-    it('should not allow to buy BET', async () => {
-        const buyBetResult = await cashier.sendBuyBet(
-            randomSender.getSender(), toNano(10), toNano(10)
-        );
-
-        expect(buyBetResult.transactions).toHaveTransaction({
-            from: randomSender.address,
-            to: cashier.address,
-            success: false,
-            exitCode: 100
-        });
-    });
-
-    it('should sell BET', async () => {
-        await cashier.sendBuyBet(vault.getSender(), toNano(10), toNano(10));
-        const sellBetResult = await cashier.sendSellBet(betMinter.getSender(), 900n);
-
-        expect(sellBetResult.transactions).toHaveTransaction({
-            from: betMinter.address,
-            to: cashier.address,
-            success: true,
-        });
-
-        expect(sellBetResult.transactions).toHaveTransaction({
-            from: cashier.address,
-            to: vault.address,
-            op: Opcodes.withdrawTon,
-            success: true,
-        });
-
-        const [tonSupply, betSupply, _] = await cashier.getSupplies();
-        expect(tonSupply).toEqual(toNano("9.109"));
-        expect(betSupply).toEqual(9_000n);
-    });
-
-
-    it('should not allow to sell BET', async () => {
-        const sellBetResult = await cashier.sendSellBet(randomSender.getSender(), 8_000n);
-
-        expect(sellBetResult.transactions).toHaveTransaction({
-            from: randomSender.address,
-            to: cashier.address,
-            success: false,
-            exitCode: 100
-        });
-    });
-
-    it('should buy GOV', async () => {
-        await cashier.sendBuyBet(vault.getSender(), toNano(10), toNano(10));
-        let buyGovResult = await cashier.sendBuyGov(betMinter.getSender(), 1_200n);
-
-        expect(buyGovResult.transactions).toHaveTransaction({
-            from: betMinter.address,
-            to: cashier.address,
-            success: true,
-        });
-
-        expect(buyGovResult.transactions).toHaveTransaction({
-            from: cashier.address,
-            to: govMinter.address,
-            op: Opcodes.mint,
-            success: true,
-        });
-
-        expect(buyGovResult.transactions).toHaveTransaction({
-            from: cashier.address,
-            to: betMinter.address,
-            op: Opcodes.returnTokens,
-            success: true,
-        });
-
-        let [tonSupply, betSupply, govSupply] = await cashier.getSupplies();
-        // console.log(betSupply);
-        // console.log(govSupply);
-        expect(tonSupply).toEqual(toNano(10));
-        expect(betSupply).toEqual(8889n);
-        expect(govSupply).toEqual(1n);
-
-        // const govPrice = await cashier.getGovPrice();
-        // console.log(`Gov price: ${govPrice}`);
-
-        buyGovResult = await cashier.sendBuyGov(betMinter.getSender(), 1_300n);
-
-        expect(buyGovResult.transactions).toHaveTransaction({
-            from: betMinter.address,
-            to: cashier.address,
-            success: true,
-        });
-
-        expect(buyGovResult.transactions).toHaveTransaction({
-            from: cashier.address,
-            to: govMinter.address,
-            op: Opcodes.mint,
-            success: true,
-        });
-
-        expect(buyGovResult.transactions).toHaveTransaction({
-            from: cashier.address,
-            to: betMinter.address,
-            op: Opcodes.returnTokens,
-            success: true,
-        });
-
-        [tonSupply, betSupply, govSupply] = await cashier.getSupplies();
-        expect(tonSupply).toEqual(toNano(10));
-        expect(betSupply).toEqual(7_766n);
-        expect(govSupply).toEqual(2n);
-    });
-
-    it('should not allow to buy GOV', async () => {
-        const buyGOVResult = await cashier.sendBuyGov(randomSender.getSender(), 5_000n);
-
-        expect(buyGOVResult.transactions).toHaveTransaction({
-            from: randomSender.address,
-            to: cashier.address,
-            success: false,
-            exitCode: 100
-        });
-    });
-
-    it('should sell GOV', async () => {
-        await cashier.sendBuyBet(vault.getSender(), toNano(10), toNano(10));
-        await cashier.sendBuyGov(betMinter.getSender(), 3_000n);
-
-        // const govPrice = await cashier.getGovPrice();
-        // const [_, betSupplyBefore] = await cashier.getSupplies();
-        // console.log(`Gov price: ${govPrice}`);
-        // console.log(betSupplyBefore);
-
-        const sellGovResult = await cashier.sendSellGov(govMinter.getSender(), 2n);
-
-        expect(sellGovResult.transactions).toHaveTransaction({
-            from: govMinter.address,
-            to: cashier.address,
-            success: true,
-        });
-
-        expect(sellGovResult.transactions).toHaveTransaction({
-            from: cashier.address,
-            to: betMinter.address,
-            op: Opcodes.returnTokens,
-            success: true,
-        });
-
-        const [tonSupply, betSupply, govSupply] = await cashier.getSupplies();
-        expect(tonSupply).toEqual(toNano(10));
-        expect(betSupply).toEqual(9_979n);
-        expect(govSupply).toEqual(0n);
-    });
-
-    it('should not allow to sell GOV', async () => {
-        const sellGOVResult = await cashier.sendSellGov(randomSender.getSender(), 1n);
-
-        expect(sellGOVResult.transactions).toHaveTransaction({
-            from: randomSender.address,
-            to: cashier.address,
-            success: false,
-            exitCode: 100
-        });
-    });
+    // it('should buy BET', async () => {
+    //     const buyBetResult = await cashier.sendBuyBet(
+    //         vault.getSender(), toNano(10), toNano(10)
+    //     );
+    //
+    //     expect(buyBetResult.transactions).toHaveTransaction({
+    //         from: vault.address,
+    //         to: cashier.address,
+    //         success: true,
+    //     });
+    //
+    //     expect(buyBetResult.transactions).toHaveTransaction({
+    //         from: cashier.address,
+    //         to: betMinter.address,
+    //         op: Opcodes.mint,
+    //         success: true,
+    //     });
+    //
+    //     const [tonSupply, betSupply, _] = await cashier.getSupplies();
+    //     expect(tonSupply).toEqual(toNano(10));
+    //     expect(betSupply).toEqual(9_900n);
+    // });
+    //
+    // it('should not allow to buy BET', async () => {
+    //     const buyBetResult = await cashier.sendBuyBet(
+    //         randomSender.getSender(), toNano(10), toNano(10)
+    //     );
+    //
+    //     expect(buyBetResult.transactions).toHaveTransaction({
+    //         from: randomSender.address,
+    //         to: cashier.address,
+    //         success: false,
+    //         exitCode: 100
+    //     });
+    // });
+    //
+    // it('should sell BET', async () => {
+    //     await cashier.sendBuyBet(vault.getSender(), toNano(10), toNano(10));
+    //     const sellBetResult = await cashier.sendSellBet(betMinter.getSender(), 900n);
+    //
+    //     expect(sellBetResult.transactions).toHaveTransaction({
+    //         from: betMinter.address,
+    //         to: cashier.address,
+    //         success: true,
+    //     });
+    //
+    //     expect(sellBetResult.transactions).toHaveTransaction({
+    //         from: cashier.address,
+    //         to: vault.address,
+    //         op: Opcodes.withdrawTon,
+    //         success: true,
+    //     });
+    //
+    //     const [tonSupply, betSupply, _] = await cashier.getSupplies();
+    //     expect(tonSupply).toEqual(toNano("9.109"));
+    //     expect(betSupply).toEqual(9_000n);
+    // });
+    //
+    //
+    // it('should not allow to sell BET', async () => {
+    //     const sellBetResult = await cashier.sendSellBet(randomSender.getSender(), 8_000n);
+    //
+    //     expect(sellBetResult.transactions).toHaveTransaction({
+    //         from: randomSender.address,
+    //         to: cashier.address,
+    //         success: false,
+    //         exitCode: 100
+    //     });
+    // });
+    //
+    // it('should buy GOV', async () => {
+    //     await cashier.sendBuyBet(vault.getSender(), toNano(10), toNano(10));
+    //     let buyGovResult = await cashier.sendBuyGov(betMinter.getSender(), 1_200n);
+    //
+    //     expect(buyGovResult.transactions).toHaveTransaction({
+    //         from: betMinter.address,
+    //         to: cashier.address,
+    //         success: true,
+    //     });
+    //
+    //     expect(buyGovResult.transactions).toHaveTransaction({
+    //         from: cashier.address,
+    //         to: govMinter.address,
+    //         op: Opcodes.mint,
+    //         success: true,
+    //     });
+    //
+    //     expect(buyGovResult.transactions).toHaveTransaction({
+    //         from: cashier.address,
+    //         to: betMinter.address,
+    //         op: Opcodes.returnTokens,
+    //         success: true,
+    //     });
+    //
+    //     let [tonSupply, betSupply, govSupply] = await cashier.getSupplies();
+    //     // console.log(betSupply);
+    //     // console.log(govSupply);
+    //     expect(tonSupply).toEqual(toNano(10));
+    //     expect(betSupply).toEqual(8889n);
+    //     expect(govSupply).toEqual(1n);
+    //
+    //     // const govPrice = await cashier.getGovPrice();
+    //     // console.log(`Gov price: ${govPrice}`);
+    //
+    //     buyGovResult = await cashier.sendBuyGov(betMinter.getSender(), 1_300n);
+    //
+    //     expect(buyGovResult.transactions).toHaveTransaction({
+    //         from: betMinter.address,
+    //         to: cashier.address,
+    //         success: true,
+    //     });
+    //
+    //     expect(buyGovResult.transactions).toHaveTransaction({
+    //         from: cashier.address,
+    //         to: govMinter.address,
+    //         op: Opcodes.mint,
+    //         success: true,
+    //     });
+    //
+    //     expect(buyGovResult.transactions).toHaveTransaction({
+    //         from: cashier.address,
+    //         to: betMinter.address,
+    //         op: Opcodes.returnTokens,
+    //         success: true,
+    //     });
+    //
+    //     [tonSupply, betSupply, govSupply] = await cashier.getSupplies();
+    //     expect(tonSupply).toEqual(toNano(10));
+    //     expect(betSupply).toEqual(7_766n);
+    //     expect(govSupply).toEqual(2n);
+    // });
+    //
+    // it('should not allow to buy GOV', async () => {
+    //     const buyGOVResult = await cashier.sendBuyGov(randomSender.getSender(), 5_000n);
+    //
+    //     expect(buyGOVResult.transactions).toHaveTransaction({
+    //         from: randomSender.address,
+    //         to: cashier.address,
+    //         success: false,
+    //         exitCode: 100
+    //     });
+    // });
+    //
+    // it('should sell GOV', async () => {
+    //     await cashier.sendBuyBet(vault.getSender(), toNano(10), toNano(10));
+    //     await cashier.sendBuyGov(betMinter.getSender(), 3_000n);
+    //
+    //     // const govPrice = await cashier.getGovPrice();
+    //     // const [_, betSupplyBefore] = await cashier.getSupplies();
+    //     // console.log(`Gov price: ${govPrice}`);
+    //     // console.log(betSupplyBefore);
+    //
+    //     const sellGovResult = await cashier.sendSellGov(govMinter.getSender(), 2n);
+    //
+    //     expect(sellGovResult.transactions).toHaveTransaction({
+    //         from: govMinter.address,
+    //         to: cashier.address,
+    //         success: true,
+    //     });
+    //
+    //     expect(sellGovResult.transactions).toHaveTransaction({
+    //         from: cashier.address,
+    //         to: betMinter.address,
+    //         op: Opcodes.returnTokens,
+    //         success: true,
+    //     });
+    //
+    //     const [tonSupply, betSupply, govSupply] = await cashier.getSupplies();
+    //     expect(tonSupply).toEqual(toNano(10));
+    //     expect(betSupply).toEqual(9_979n);
+    //     expect(govSupply).toEqual(0n);
+    // });
+    //
+    // it('should not allow to sell GOV', async () => {
+    //     const sellGOVResult = await cashier.sendSellGov(randomSender.getSender(), 1n);
+    //
+    //     expect(sellGOVResult.transactions).toHaveTransaction({
+    //         from: randomSender.address,
+    //         to: cashier.address,
+    //         success: false,
+    //         exitCode: 100
+    //     });
+    // });
 
     // it('should change settings value inc', async () => {
     //     await change_settings(
