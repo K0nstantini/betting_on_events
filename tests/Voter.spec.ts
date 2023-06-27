@@ -31,7 +31,7 @@ describe('Voter', () => {
 
         voter = blockchain.openContract(Voter.createFromConfig({
             addresses: await getAddresses(cashier.address, wallet.address, votesMinter.address),
-            pool: Dictionary.empty(Dictionary.Keys.Uint(32), Dictionary.Values.Cell()),
+            pool: Dictionary.empty(Dictionary.Keys.BigInt(256), Dictionary.Values.Cell()),
             settings: getSettings(),
             govSupply: BigInt(10)
         }, code));
@@ -53,15 +53,14 @@ describe('Voter', () => {
         // blockchain and cashier are ready to use
     });
 
-    it('should take vote', async () => {
-        const votingResult = await voter.sendVoting(
-            wallet.getSender(),
-            1,
-            cashier.address,
-            "bet_buy_fee",
-            true,
-            SettingDirection.Up
-        );
+    it('should start a new vote', async () => {
+        const opts = {
+            target: cashier.address,
+            name: "bet_buy_fee",
+            newVote: true,
+            direction: SettingDirection.Up
+        };
+        const votingResult = await voter.sendVoting(wallet.getSender(), 1, opts);
 
         expect(votingResult.transactions).toHaveTransaction({
             from: voter.address,
@@ -71,6 +70,24 @@ describe('Voter', () => {
         });
     });
 
+    it('should confirm setting from a target contract', async () => {
+        const opts = {
+            target: cashier.address,
+            name: "bet_buy_fee",
+            direction: SettingDirection.Down
+        };
+        const votingResult = await voter.sendConfirm(cashier.getSender(), 1, opts);
+
+        expect(votingResult.transactions).toHaveTransaction({
+            from: cashier.address,
+            to: voter.address,
+            op: Opcodes.confirm,
+            success: true,
+        });
+
+        const data = await voter.getLot(cashier.address, "bet_buy_fee");
+        console.log(data);
+    });
 
 });
 
@@ -83,11 +100,10 @@ async function getAddresses(cashier: Address, wallet: Address, voteMinter: Addre
     return addresses;
 }
 
-
 function getSettings() {
     const settings = Dictionary.empty(Dictionary.Keys.Uint(32), Dictionary.Values.Cell());
     settings.set(crc32("instant_approve"), getSet(50, 25, 75, 1));
-    settings.set(crc32("half_approve_wait"), getSet(120, 20, 500, 10));
+    settings.set(crc32("half_approve_wait"), getSet(432_000, 72_000, 1_800_000, 10));
     return settings;
 }
 
