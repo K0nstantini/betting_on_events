@@ -70,6 +70,19 @@ describe('Voter', () => {
         });
     });
 
+    it('should update gov supply', async () => {
+        const update = await voter.sendUpdateGovSupply(cashier.getSender(), 20);
+
+        expect(update.transactions).toHaveTransaction({
+            from: cashier.address,
+            to: voter.address,
+            success: true,
+        });
+
+        const supply = await voter.getGovSupply();
+        expect(supply).toEqual(BigInt(20));
+    });
+
     it('should confirm setting from a target contract', async () => {
         const opts = {
             target: cashier.address,
@@ -85,8 +98,48 @@ describe('Voter', () => {
             success: true,
         });
 
+        expect(votingResult.transactions).toHaveTransaction({
+            from: voter.address,
+            to: votesMinter.address,
+            op: Opcodes.mint,
+            success: true,
+        });
+
         const data = await voter.getLot(cashier.address, "bet_buy_fee");
-        console.log(data);
+        expect(data).not.toBeNull();
+    });
+
+    it('should confirm setting from a target contract and finalize', async () => {
+        const opts = {
+            target: cashier.address,
+            name: "bet_buy_fee",
+            direction: SettingDirection.Down
+        };
+        const votingResult = await voter.sendConfirm(cashier.getSender(), 5, opts);
+
+        expect(votingResult.transactions).toHaveTransaction({
+            from: cashier.address,
+            to: voter.address,
+            op: Opcodes.confirm,
+            success: true,
+        });
+
+        expect(votingResult.transactions).toHaveTransaction({
+            from: voter.address,
+            to: cashier.address,
+            op: Opcodes.changeSettings,
+            success: true,
+        });
+
+        expect(votingResult.transactions).toHaveTransaction({
+            from: voter.address,
+            to: votesMinter.address,
+            op: Opcodes.mint,
+            success: true,
+        });
+
+        const data = await voter.getLot(cashier.address, "bet_buy_fee");
+        expect(data).toBeNull();
     });
 
 });

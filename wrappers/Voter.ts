@@ -99,10 +99,27 @@ export class Voter implements Contract {
         });
     }
 
+    async sendUpdateGovSupply(provider: ContractProvider, via: Sender, amount: number) {
+        await provider.internal(via, {
+            value: '0.05',
+            sendMode: SendMode.PAY_GAS_SEPARATELY,
+            body: beginCell()
+                .storeUint(Opcodes.update, 32)
+                .storeUint(Date.now(), 64)
+                .storeCoins(amount)
+                .endCell(),
+        });
+    }
+
     async getLot(provider: ContractProvider, target: Address, name: string) {
         const res = await provider.get('get_voter_data', []);
         res.stack.readCell();
-        const poolCell = res.stack.readCell();
+        let poolCell;
+        try {
+            poolCell = res.stack.readCell();
+        } catch {
+            return null;
+        }
         let ds = poolCell.beginParse();
         const pool = ds.loadDictDirect(Dictionary.Keys.BigInt(256), Dictionary.Values.Cell());
         const dc = beginCell().storeAddress(target).endCell();
@@ -123,6 +140,14 @@ export class Voter implements Contract {
             lastVoteTime: ds.loadUint(32),
             timeToFinalize: ds.loadUint(32),
         }
+    }
+
+    async getGovSupply(provider: ContractProvider) {
+        const res = await provider.get('get_voter_data', []);
+        res.stack.pop();
+        res.stack.pop();
+        res.stack.pop();
+        return res.stack.readBigNumber();
     }
 
 }

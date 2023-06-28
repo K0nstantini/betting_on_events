@@ -12,4 +12,5 @@ export const Opcodes = {
     confirm: 0x8fd3a344,
     changeAddr: 0x314ddb8e,
     voting: 0xfc28da55,
+    update: 0x98253578
 };
