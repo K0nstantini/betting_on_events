@@ -142,6 +142,23 @@ describe('Voter', () => {
         expect(data).toBeNull();
     });
 
+    it('should confirm setting format', async () => {
+        // const blockchain = await Blockchain.create();
+        // const voterContract = await blockchain.openContract(voter);
+        //
+        // const check = await voter.sendConfirmSettingFormat(
+        //     voterContract.getSender(),
+        //     "half_approve_wait",
+        //     1
+        // );
+        //
+        // expect(check.transactions).toHaveTransaction({
+        //     from: voter.address,
+        //     to: voter.address,
+        //     success: true,
+        // });
+    });
+
 });
 
 

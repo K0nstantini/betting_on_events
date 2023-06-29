@@ -3,6 +3,7 @@
 #include "imports/stdlib.fc";
 #include "imports/errors.fc";
 #include "imports/messages.fc";
+#include "imports/changeable_settings.fc";
 #include "imports/op-codes.fc";
 #include "imports/constants.fc";
 
@@ -243,17 +244,16 @@ int get_setting(cell dic, int id) impure inline {
         int id = get_lot_id(target, id_set);
         (cell payload, int success) = pool.udict_get_ref?(256, id);
 
-        if (~ success) {
+        if (success) {
+            pool~update_pool(id, 1, payload, target, id_set, choice, user_addr, amount, gov_supply, addresses, settings, query_id);
+            save_data(addresses, pool, settings, gov_supply);
+        } else {
             if (new_vote) {
                 send_check_setting_format(target, id_set, user_addr, amount, choice, query_id);
             } else {
                 return_tokens(sender_addr, user_addr, amount, query_id);
             }
-            return ();
         }
-
-        pool~update_pool(id, 1, payload, target, id_set, choice, user_addr, amount, gov_supply, addresses, settings, query_id);
-        save_data(addresses, pool, settings, gov_supply);
 
         return ();
     }
@@ -282,6 +282,12 @@ int get_setting(cell dic, int id) impure inline {
         throw_unless(error::invalid_sender_addr(), equal_slices(sender_addr, cashier));
         int new_supply = in_msg_body~load_coins();
         save_data(addresses, pool, settings, new_supply);
+        return ();
+    }
+
+    if (op == op::check_settings_format()) {
+        (int id, int success) = settings::check(settings, sender_addr, my_address(), in_msg_body);
+        settings::send_check_confirm(my_address(), id, success, in_msg_body, msg_value, query_id);
         return ();
     }
 

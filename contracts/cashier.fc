@@ -3,6 +3,7 @@
 #include "imports/stdlib.fc";
 #include "imports/errors.fc";
 #include "imports/messages.fc";
+#include "imports/changeable_settings.fc";
 #include "imports/op-codes.fc";
 #include "imports/constants.fc";
 

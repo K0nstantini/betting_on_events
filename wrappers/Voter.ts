@@ -111,6 +111,19 @@ export class Voter implements Contract {
         });
     }
 
+    async sendConfirmSettingFormat(provider: ContractProvider, via: Sender, name: string, choice: number) {
+        await provider.internal(via, {
+            value: '0.05',
+            sendMode: SendMode.PAY_GAS_SEPARATELY,
+            body: beginCell()
+                .storeUint(Opcodes.checkSettingsFormat, 32)
+                .storeUint(Date.now(), 64)
+                .storeCoins(crc32(name))
+                .storeUint(choice, 2)
+                .endCell(),
+        });
+    }
+
     async getLot(provider: ContractProvider, target: Address, name: string) {
         const res = await provider.get('get_voter_data', []);
         res.stack.readCell();
