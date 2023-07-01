@@ -5,54 +5,90 @@
 #include "messages.fc";
 #include "op-codes.fc";
 
-const gas_consumption = 10000000; ;; 0.01 TON
+const change_accuracy = 10000; ;; 0.01
 
-int check_int_value (slice in_msg_body, slice ds) inline {
-    int choice = 0;
-    try {
-        choice = in_msg_body~load_uint(2);
-    } catch(_, _) {
-        return 0;
-    }
-    if (~ ((choice = 1) | (choice = 2))) {
-        return 0;
-    }
-
-    int value = ds~load_int(32);
-    int min = ds~load_int(32);
-    int max = ds~load_int(32);
-    return (value < max) & (value > min);
+int settings::get(cell dic, int id) impure inline {
+    (cell payload, int success) = dic.udict_get_ref?(32, id);
+    throw_unless(error::dict_value_not_found(), success);
+    slice ds = payload.begin_parse();
+    return ds~load_int(32);
 }
 
-(int, int) settings::check(cell settings, slice sender_addr, slice gov_addr, slice in_msg_body) impure inline {
-    throw_unless(error::invalid_sender_addr(), equal_slices(sender_addr, gov_addr));
+(int, int) settings::check(cell settings, slice sender, slice voter, slice in_msg_body) impure inline {
+    throw_unless(error::invalid_sender_addr(), equal_slices(sender, voter));
 
     int id = in_msg_body~load_uint(32);
     (cell payload, int success) = settings.udict_get_ref?(32, id);
 
     if (success) {
         slice ds = payload.begin_parse();
-        int type_set = ds~load_uint(2);
-        if (type_set == 0) {
-            success = check_int_value(in_msg_body, ds);
-        } else {
-            success = 0;
+
+        int choice = 0;
+        try {
+            choice = in_msg_body~load_uint(2);
+        } catch(_, _) {
+            return (id, 0);
         }
+
+        if (~ ((choice = 1) | (choice = 2))) {
+            return (id, 0);
+        }
+
+        int value = ds~load_int(32);
+        int min = ds~load_int(32);
+        int max = ds~load_int(32);
+        success = (value < max) & (value > min);
     }
 
     return (id, success);
 }
 
-() settings::send_check_confirm(slice gov_addr, int id, int success, slice in_msg_body, int msg_value, int query_id) impure inline {
+() settings::send_check_confirm(slice voter, int id, int success, slice in_msg_body, int msg_value, int query_id) impure inline {
+    int gas_consumption = 10000000; ;; 0.01 TON
     throw_unless(error::not_enough_gas_amount(), msg_value >= gas_consumption);
 
     var msg_body = begin_cell()
             .store_uint(op::confirm(), 32)
             .store_uint(query_id, 64)
-            .store_uint(id, 32)
             .store_uint(success ? 1 : 0, 1)
             .store_slice(in_msg_body)
             .end_cell();
 
-    messages::send_simple(gov_addr, msg_body, send_mode::paid_externally(), msg_value - gas_consumption);
+    messages::send_simple(voter, msg_body, send_mode::paid_externally(), msg_value - gas_consumption);
+}
+
+cell settings:change(cell settings, slice sender, slice voter, slice in_msg_body) impure inline {
+    throw_unless(error::invalid_sender_addr(), equal_slices(sender, voter));
+
+    int id = in_msg_body~load_uint(32);
+
+    (cell payload, int success) = settings.udict_get_ref?(32, id);
+    throw_unless(error::dict_value_not_found(), success);
+
+    int choice = in_msg_body~load_uint(1);
+
+    slice ds = payload.begin_parse();
+    slice ds = in_msg_body~load_ref().begin_parse();
+
+    int value = ds~load_int(32);
+    int min = ds~load_int(32);
+    int max = ds~load_int(32);
+    int step_id = ds~load_uint(32);
+    int step = settings::get(settings, step_id);
+
+    int sign = choice ? 1 : - 1;
+    value += muldiv((max - min), step, change_accuracy) * sign;
+    value = (sign > 0)
+            ? ((value > max) ? max : value)
+            : ((value < min) ? min : value);
+
+    cell new_setting = begin_cell()
+            .store_int(value, 32)
+            .store_int(min, 32)
+            .store_int(max, 32)
+            .store_uint(step_id, 32)
+            .end_cell();
+    settings~udict_set_ref(32, id, new_setting);
+
+    return settings;
 }

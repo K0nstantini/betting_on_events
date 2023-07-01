@@ -109,6 +109,38 @@ describe('Voter', () => {
         expect(data).not.toBeNull();
     });
 
+    it('should change own setting', async () => {
+        const opts = {
+            target: voter.address,
+            name: "half_approve_wait",
+            newVote: true,
+            direction: SettingDirection.Up
+        };
+        const votingResult = await voter.sendVoting(wallet.getSender(), 5, opts);
+
+        expect(votingResult.transactions).toHaveTransaction({
+            from: voter.address,
+            to: voter.address,
+            op: Opcodes.checkSettingsFormat,
+            success: true,
+        });
+
+        expect(votingResult.transactions).toHaveTransaction({
+            from: voter.address,
+            to: voter.address,
+            op: Opcodes.confirm,
+            success: true,
+        });
+
+        expect(votingResult.transactions).toHaveTransaction({
+            from: voter.address,
+            to: voter.address,
+            op: Opcodes.changeSettings,
+            success: true,
+        });
+
+    });
+
     it('should confirm setting from a target contract and finalize', async () => {
         const opts = {
             target: cashier.address,
@@ -142,25 +174,24 @@ describe('Voter', () => {
         expect(data).toBeNull();
     });
 
-    it('should confirm setting format', async () => {
-        // const blockchain = await Blockchain.create();
-        // const voterContract = await blockchain.openContract(voter);
-        //
-        // const check = await voter.sendConfirmSettingFormat(
-        //     voterContract.getSender(),
-        //     "half_approve_wait",
-        //     1
-        // );
-        //
-        // expect(check.transactions).toHaveTransaction({
-        //     from: voter.address,
-        //     to: voter.address,
-        //     success: true,
-        // });
-    });
+    // it('should confirm setting format', async () => {
+    //     const blockchain = await Blockchain.create();
+    //     const voterContract = await blockchain.openContract(voter);
+    //
+    //     const check = await voter.sendConfirmSettingFormat(
+    //         voterContract.getSender(),
+    //         "half_approve_wait",
+    //         1
+    //     );
+    //
+    //     expect(check.transactions).toHaveTransaction({
+    //         from: voter.address,
+    //         to: voter.address,
+    //         success: true,
+    //     });
+    // });
 
 });
-
 
 async function getAddresses(cashier: Address, wallet: Address, voteMinter: Address) {
     const addresses = Dictionary.empty(Dictionary.Keys.Uint(32), Dictionary.Values.Address());
@@ -172,19 +203,21 @@ async function getAddresses(cashier: Address, wallet: Address, voteMinter: Addre
 
 function getSettings() {
     const settings = Dictionary.empty(Dictionary.Keys.Uint(32), Dictionary.Values.Cell());
-    settings.set(crc32("instant_approve"), getSet(50, 25, 75, 1));
-    settings.set(crc32("half_approve_wait"), getSet(432_000, 72_000, 1_800_000, 10));
+    const step_instant_approve = crc32("instant_approve_step");
+    settings.set(crc32("instant_approve"), getSet(50, 25, 75, step_instant_approve));
+    settings.set(crc32("instant_approve_step"), getSet(1, 1, 30, step_instant_approve));
+
+    const step_half_approve_wait = crc32("half_approve_wait_step");
+    settings.set(crc32("half_approve_wait"), getSet(432_000, 72_000, 1_800_000, step_half_approve_wait));
+    settings.set(crc32("half_approve_wait_step"), getSet(10, 1, 30, step_half_approve_wait));
     return settings;
 }
 
-function getSet(value: number, min: number, max: number, step: number): Cell {
+function getSet(value: number, min: number, max: number, stepId: number): Cell {
     return beginCell()
-        .storeUint(0, 2)
-        .storeInt(value, 32)          // value
-        .storeInt(min, 32)       // min
-        .storeInt(max, 32)    // max
-        .storeUint(step, 16)   // step
-        .storeUint(1, 16)     // min step
-        .storeUint(20, 16)   // max step
+        .storeInt(value, 32)
+        .storeInt(min, 32)
+        .storeInt(max, 32)
+        .storeInt(stepId, 32)
         .endCell();
 }

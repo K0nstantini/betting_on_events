@@ -7,7 +7,7 @@
 #include "imports/op-codes.fc";
 #include "imports/constants.fc";
 
-const fee_accuracy = 10000; ;; 0.01
+const fee_accuracy = 10000; ;; 0.01 todo: del
 const bet_accuracy = 1000000;
 const gov_start_price = 1000;
 const min_bet_for_change = 100;
@@ -128,6 +128,7 @@ int bet_for_gov(int amount, int gov_supply, int bet_supply, int ton_supply, cell
     return sum_with_fee(amount, get_fee_factor(fees, gov_sell_fee));
 }
 
+;; todo: delete
 int change_setting(int value, int step, int min, int max, int sign) inline {
     value += muldiv((max - min), step, fee_accuracy) * sign;
     return (sign > 0) ?
